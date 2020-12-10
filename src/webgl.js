@@ -172,7 +172,6 @@ function initCopyProgram(gl) {
   layout(location = 0) out vec4 copyOut;
 
   void main() {
-    // default return black
     copyOut = vec4(0.0, 0.0, 0.0, 1.0);
 
     // if we are not in the padding around the video, get the texture value
@@ -215,7 +214,6 @@ function initPadProgram(gl, padding) {
       float y = gl_FragCoord.y - 4.0;
       vec2 coords = vec2(x / videoRes.x, y / videoRes.y);
       padOut = texture(originalSampler, coords) * 255.0;
-      // padOut = vec4(x, y, coords.r, coords.g);
     }
   }
   `;
@@ -378,13 +376,6 @@ ${operations.join("\n")}
     out1 = max(out1 + biases[1], 0.0);
     out2 = max(out2 + biases[2], 0.0);
     out3 = max(out3 + biases[3], 0.0);
-
-    // out0 = vec4(weights[${4 * layer_1_depth * 4 + 6}].r, in4_2.r, weights[${4 * layer_1_depth * 4 + 6}].g, in4_2.g);
-    // out1 = vec4(weights[${4 * layer_1_depth * 4 + 6}].b, in4_2.b, weights[${4 * layer_1_depth * 4 + 6}].a, in4_2.a);
-    // out2 = vec4(weights[${4 * layer_1_depth * 4 + 7}].r, in4_3.r, weights[${4 * layer_1_depth * 4 + 7}].g, in4_3.g);
-    // out3 = vec4(weights[${4 * layer_1_depth * 4 + 7}].b, in4_3.b, weights[${4 * layer_1_depth * 4 + 7}].a, in4_3.a);
-
-    // out0 = vec4(coords_0.r, coords_4.g, inWidth, inHeight);
   }
   `;
 
