@@ -953,9 +953,9 @@ function resizeCanvas(canvas) {
 }
 
 function fitBoundingBox(w, h, canvasW, canvasH) {
-  const left = Math.round((canvasW - w) / 2.0);
+  const left = Math.round((canvasW - w) * 0.5);
   const right = canvasW - left;
-  const top = Math.round((canvasH - h) / 2.0);
+  const top = Math.round((canvasH - h) * 0.5);
   const bottom = canvasH - top;
 
   return [left, top, right, bottom];
@@ -1279,12 +1279,20 @@ export function main(player, canvas, options) {
    * Draw the scene repeatedly
    */
   function render(now) {
+    console.time("render");
     if (!copyVideo) return;
 
+    console.time("updateTexture");
     updateTexture(gl, input_texture, video);
-    resizeCanvas(canvas);
+    console.timeEnd("updateTexture");
 
+    console.time("resizeCanvas")
+    resizeCanvas(canvas);
+    console.timeEnd("resizeCanvas")
+
+    console.time("scaleToFit")
     const renderSettings = scaleToFit(videoWidth, videoHeight, canvas.width, canvas.height);
+    console.timeEnd("scaleToFit")
     // console.log("renderSettings:", renderSettings);
 
     padProgramInfo.videoRes = [videoWidth, videoHeight];
@@ -1409,6 +1417,7 @@ export function main(player, canvas, options) {
 
     // Do it again!
     requestAnimationFrame(() => setTimeout(render, frameDelay));
+    console.timeEnd("render");
   }
 
   requestAnimationFrame(render);
