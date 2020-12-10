@@ -939,10 +939,6 @@ function drawScene(gl, programInfo, buffers, texture) {
 }
 
 function resizeCanvas(canvas) {
-  // Lookup the size the browser is displaying the canvas.
-  //var displayWidth  = Math.floor(canvas.clientWidth * window.devicePixelRatio);
-  //var displayHeight = Math.floor(canvas.clientHeight * window.devicePixelRatio);
-
   const displayWidth = canvas.clientWidth;
   const displayHeight = canvas.clientHeight;
 
