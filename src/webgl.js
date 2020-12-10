@@ -122,17 +122,13 @@ const vsSource = `#version 300 es
 function loadShader(gl, type, source) {
   const shader = gl.createShader(type);
 
-  // Send the source to the shader object
   gl.shaderSource(shader, source);
 
-  // Compile the shader program
   gl.compileShader(shader);
 
   // See if it compiled successfully
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    alert(
-      'An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader)
-    );
+    alert('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
     gl.deleteShader(shader);
     return null;
   }
@@ -145,19 +141,14 @@ function initShaderProgram(gl, vsSource, fsSource) {
   const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
   const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
 
-  // Create the shader program
   const shaderProgram = gl.createProgram();
   gl.attachShader(shaderProgram, vertexShader);
   gl.attachShader(shaderProgram, fragmentShader);
   gl.linkProgram(shaderProgram);
 
-  // If creating the shader program failed, alert
-
+  // If linking the shader program failed, alert
   if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-    alert(
-      'Unable to initialize the shader program: ' +
-      gl.getProgramInfoLog(shaderProgram)
-    );
+    alert('Unable to initialize the shader program: ' + gl.getProgramInfoLog(shaderProgram));
     return null;
   }
 
@@ -167,7 +158,6 @@ function initShaderProgram(gl, vsSource, fsSource) {
 /**
  * WebGL Shaders
  */
-
 function initCopyProgram(gl) {
   const copyFragShader = `#version 300 es
   #pragma vscode_glsllint_stage: frag
@@ -629,19 +619,13 @@ ${operations.join("\n")}
   return initShaderProgram(gl, vsSource, reconstruct_shader);
 }
 
-
-// initBuffers
 function initBuffers(gl) {
   // Create a buffer for the cube's vertex positions.
   const positionBuffer = gl.createBuffer();
 
-  // Select the positionBuffer as the one to apply buffer
-  // operations to from here out.
-
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
   // Now create an array of positions for the cube.
-
   const positions = [
     // Simple square
     -1.0,
@@ -688,13 +672,20 @@ function initBuffers(gl) {
   };
 }
 
+/**
+ * Create a new texture to store the video frame data
+ *
+ * @param gl
+ * @param width
+ * @param height
+ * @param float
+ * @returns {WebGLTexture}
+ */
 function createTexture(gl, width, height, float) {
-  // create to render to
   const texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
 
   {
-    // define size and format of level 0
     const level = 0;
     const border = 0;
     const format = gl.RGBA;
@@ -728,8 +719,14 @@ function createTexture(gl, width, height, float) {
   return texture;
 }
 
-// Initialize a texture and load an image.
-// When the image finished loading copy it into the texture.
+
+/**
+ * Initialize a texture and load an image. When the image is finished loading
+ * copy it into the texture.
+ *
+ * @param gl
+ * @returns {WebGLTexture}
+ */
 function initTexture(gl) {
   const texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -759,25 +756,16 @@ function initTexture(gl) {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-  /*
-  const image = new Image();
-  image.onload = function() {
-    loaded_count++;
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
-                  srcFormat, srcType, image);
-
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  };
-  image.src = "tos_01050.png";
-  */
-
   return texture;
 }
 
+/**
+ * Set the texture to the current video frame
+ *
+ * @param gl
+ * @param texture
+ * @param video
+ */
 function updateTexture(gl, texture, video) {
   const level = 0;
   const internalFormat = gl.RGBA;
@@ -816,17 +804,22 @@ const modelViewMatrix = mat4.create();
 mat4.translate(
   modelViewMatrix, // destination matrix
   modelViewMatrix, // matrix to translate
-  [-0.0, 0.0, -6.0]
-); // amount to translate
+  [-0.0, 0.0, -6.0] // amount to translate
+);
 
 const normalMatrix = mat4.create();
 mat4.invert(normalMatrix, modelViewMatrix);
 mat4.transpose(normalMatrix, normalMatrix);
 
-
-// Draw the scene.
+/**
+ * Executes the GL program with the passed buffers and texture
+ *
+ * @param gl
+ * @param programInfo
+ * @param buffers
+ * @param texture
+ */
 function drawScene(gl, programInfo, buffers, texture) {
-  // Clear the canvas before we start drawing on it.
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   // Tell WebGL how to pull out the positions from the position
@@ -852,7 +845,6 @@ function drawScene(gl, programInfo, buffers, texture) {
   // Tell WebGL which indices to use to index the vertices
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
 
-  // Tell WebGL to use our program when drawing
   gl.useProgram(programInfo.program);
 
   // Set the shader uniforms
@@ -997,9 +989,13 @@ function scaleToFit(videoWidth, videoHeight, canvasWidth, canvasHeight) {
   return [[curWidth, curHeight], fitBoundingBox(curWidth, curHeight, canvasWidth, canvasHeight)];
 }
 
-//
-// Start here
-//
+/**
+ * Start here
+ *
+ * @param player The VideoJS player
+ * @param canvas The HTML canvas
+ * @param options Options passed to the player
+ */
 export function main(player, canvas, options) {
   const video = player.tech().el();
   const gl = canvas.getContext('webgl2');
@@ -1020,11 +1016,8 @@ export function main(player, canvas, options) {
     copyVideo = false;
   });
 
-  // If we don't have a GL context, give up now
   if (!gl) {
-    alert(
-      'Unable to initialize WebGL. Your browser or machine may not support it.'
-    );
+    alert('Unable to initialize WebGL. Your browser or machine may not support it.');
     return;
   }
 
@@ -1086,7 +1079,6 @@ export function main(player, canvas, options) {
     filters: [gl.NEAREST],
     videoRes: videoRes
   };
-
 
   console.log("conv1_1 program");
   const conv1_1_program = init_conv1_1_program(gl);
@@ -1236,7 +1228,7 @@ export function main(player, canvas, options) {
     videoRes: videoRes
   };
 
-  player.on("loadedmetadata", (x) => {
+  player.on("loadedmetadata", () => {
     console.log("Video res:", video.videoWidth, video.videoHeight);
     videoWidth = video.videoWidth;
     videoHeight = video.videoHeight;
@@ -1291,7 +1283,9 @@ export function main(player, canvas, options) {
   let fps = 0;
   let frameDelay = 0;
 
-  // Draw the scene repeatedly
+  /**
+   * Draw the scene repeatedly
+   */
   function render(now) {
     if (!copyVideo) return;
 
@@ -1311,40 +1305,18 @@ export function main(player, canvas, options) {
     render_program_info.videoRes = renderSettings[0];
     render_program_info.renderArea = renderSettings[1];
 
-    /**
-     * PAD INPUT
-     */
+
+    // PAD INPUT
     gl.bindFramebuffer(gl.FRAMEBUFFER, pad_fb);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, pad_texture, 0);
     gl.drawBuffers([
       gl.COLOR_ATTACHMENT0, // gl_FragData[0]
     ]);
     gl.viewport(0, 0, videoWidth + 8, videoHeight + 8);
-
     drawScene(gl, padProgramInfo, buffers);
 
-    /*
-    console.log("PADDED");
-    var w = videoWidth + 8;
-    var h = videoHeight + 8;
-    gl.readBuffer(gl.COLOR_ATTACHMENT0);
-    var pixels0 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels0);
-
-    for (var readY = 99; readY < 100; readY++) {
-      for (var readX = 99; readX < 107; readX++) {
-        var vals = [];
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 3]);
-        console.log(`padded ${readY}_${readX}`, vals);
-      }
-    }
-    */
 
     // Apply W_conv1_1
-
     gl.bindFramebuffer(gl.FRAMEBUFFER, w_conv1_1_fb);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, conv1_1_texture1, 0);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, conv1_1_texture2, 0);
@@ -1354,54 +1326,12 @@ export function main(player, canvas, options) {
       gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2, gl.COLOR_ATTACHMENT3
     ]);
     gl.viewport(0, 0, videoWidth + 8, videoHeight + 4);
-
     drawScene(gl, conv1_1_program_info, buffers);
 
-    /*
-    console.log("CONV1_1");
-    var w = videoWidth + 8;
-    var h = videoHeight + 4;
-    gl.readBuffer(gl.COLOR_ATTACHMENT0);
-    var pixels0 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels0);
-    gl.readBuffer(gl.COLOR_ATTACHMENT1);
-    var pixels1 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels1);
-    gl.readBuffer(gl.COLOR_ATTACHMENT2);
-    var pixels2 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels2);
-    gl.readBuffer(gl.COLOR_ATTACHMENT3);
-    var pixels3 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels3);
-
-    for (var readY = 99; readY < 100; readY++) {
-      for (var readX = 99; readX < 107; readX++) {
-        var vals = [];
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 3]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 3]);
-        vals.push(pixels2[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels2[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels2[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels2[readY * w * 4 + readX * 4 + 3]);
-        vals.push(pixels3[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels3[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels3[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels3[readY * w * 4 + readX * 4 + 3]);
-        console.log(`conv1_1 ${readY}_${readX}`, vals);
-      }
-    }
-    */
 
     // Apply W_conv1_2, relu and bias
     // in: 648x290x8
     // out: 644x290x8
-
     gl.bindFramebuffer(gl.FRAMEBUFFER, w_conv1_2_fb);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, conv1_2_texture1, 0);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, conv1_2_texture2, 0);
@@ -1414,54 +1344,12 @@ export function main(player, canvas, options) {
       gl.COLOR_ATTACHMENT3,
     ]);
     gl.viewport(0, 0, videoWidth + 4, videoHeight + 4);
-
     drawScene(gl, conv1_2_program_info, buffers);
 
-    /*
-    console.log("CONV1_2");
-    var w = videoWidth + 4;
-    var h = videoHeight + 4;
-    gl.readBuffer(gl.COLOR_ATTACHMENT0);
-    var pixels0 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels0);
-    gl.readBuffer(gl.COLOR_ATTACHMENT1);
-    var pixels1 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels1);
-    gl.readBuffer(gl.COLOR_ATTACHMENT2);
-    var pixels2 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels2);
-    gl.readBuffer(gl.COLOR_ATTACHMENT3);
-    var pixels3 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels3);
-
-    for (var readY = 99; readY < 100; readY++) {
-      for (var readX = 99; readX < 107; readX++) {
-        var vals = [];
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 3]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 3]);
-        vals.push(pixels2[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels2[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels2[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels2[readY * w * 4 + readX * 4 + 3]);
-        vals.push(pixels3[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels3[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels3[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels3[readY * w * 4 + readX * 4 + 3]);
-        console.log(`conv1_2 ${readY}_${readX}`, vals);
-      }
-    }
-    */
 
     // Apply W_conv2_1
     // in: 644x290x8
     // out: 644x288x4
-
     gl.bindFramebuffer(gl.FRAMEBUFFER, w_conv2_1_fb);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, conv2_1_texture1, 0);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, conv2_1_texture2, 0);
@@ -1470,40 +1358,12 @@ export function main(player, canvas, options) {
       gl.COLOR_ATTACHMENT1,
     ]);
     gl.viewport(0, 0, videoWidth + 4, videoHeight + 2);
-
     drawScene(gl, conv2_1_program_info, buffers);
 
-    /*
-    console.log("CONV2_1");
-    var w = videoWidth + 4;
-    var h = videoHeight + 2;
-    gl.readBuffer(gl.COLOR_ATTACHMENT0);
-    var pixels0 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels0);
-    gl.readBuffer(gl.COLOR_ATTACHMENT1);
-    var pixels1 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels1);
-
-    for (var readY = 99; readY < 100; readY++) {
-      for (var readX = 99; readX < 107; readX++) {
-        var vals = [];
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 3]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 3]);
-        console.log(`conv2_1 ${readY}_${readX}`, vals);
-      }
-    }
-    */
 
     // Apply W_conv2_2, relu and bias
     // in: 644x288x4
     // out: 642x288x4
-
     gl.bindFramebuffer(gl.FRAMEBUFFER, w_conv2_2_fb);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, conv2_2_texture1, 0);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, conv2_2_texture2, 0);
@@ -1512,81 +1372,27 @@ export function main(player, canvas, options) {
       gl.COLOR_ATTACHMENT1,
     ]);
     gl.viewport(0, 0, videoWidth + 2, videoHeight + 2);
-
     drawScene(gl, conv2_2_program_info, buffers);
-
-    /*
-    console.log("CONV2_2");
-    var w = videoWidth + 2;
-    var h = videoHeight + 2;
-    gl.readBuffer(gl.COLOR_ATTACHMENT0);
-    var pixels0 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels0);
-    gl.readBuffer(gl.COLOR_ATTACHMENT1);
-    var pixels1 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels1);
-
-    for (var readY = 99; readY < 100; readY++) {
-      for (var readX = 99; readX < 107; readX++) {
-        var vals = [];
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 3]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels1[readY * w * 4 + readX * 4 + 3]);
-        console.log(`conv2_2 ${readY}_${readX}`, vals);
-      }
-    }
-    */
 
 
     // Reconstruct
     // in: 642x288x4
     // out: 640x286x27
     // out: 1920x858x3 (hard)
-
     // Scale the current texture
     // Sum and clamp
-
     gl.bindFramebuffer(gl.FRAMEBUFFER, w_reconstruct_fb);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, reconstruct_texture, 0);
     gl.drawBuffers([
       gl.COLOR_ATTACHMENT0, // gl_FragData[0]
     ]);
     gl.viewport(0, 0, videoWidth * 3, videoHeight * 3);
-
     drawScene(gl, reconstruct_program_info, buffers);
 
-    /*
-    console.log("Reconstruct");
-    var w = videoWidth * 3;
-    var h = videoHeight * 3;
-    gl.readBuffer(gl.COLOR_ATTACHMENT0);
-    var pixels0 = new Float32Array(w * h * 4);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels0);
 
-    for (var readY = 99; readY < 102; readY++) {
-      for (var readX = 99; readX < 102; readX++) {
-        var vals = [];
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 0]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 1]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 2]);
-        vals.push(pixels0[readY * w * 4 + readX * 4 + 3]);
-        console.log(`reconstruct ${readY}_${readX}`, vals);
-      }
-    }
-    */
-
-
-    /**
-     * Render Final Video
-     */
+    // Render Final Video
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, canvas.width, canvas.height);
-
     drawScene(gl, render_program_info, buffers);
 
     now = new Date().getTime();
