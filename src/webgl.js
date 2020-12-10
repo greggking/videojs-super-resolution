@@ -107,12 +107,15 @@ function get_reconstruct_biases(raw_weights) {
  * Utility functions
  */
 const vsSource = `#version 300 es
-    in vec4 aVertexPosition;
-    uniform mat4 uModelViewMatrix;
-    uniform mat4 uProjectionMatrix;
-    void main(void) {
-        gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    }
+  #pragma vscode_glsllint_stage: vert
+
+  in vec4 aVertexPosition;
+  uniform mat4 uModelViewMatrix;
+  uniform mat4 uProjectionMatrix;
+
+  void main(void) {
+      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  }
 `;
 
 // creates a shader of the given type, uploads the source and compiles it.
@@ -167,7 +170,10 @@ function initShaderProgram(gl, vsSource, fsSource) {
 
 function initCopyProgram(gl) {
   const copyFragShader = `#version 300 es
+  #pragma vscode_glsllint_stage: frag
+
   precision mediump float;
+
   uniform sampler2D originalSampler;
 
   uniform vec2 videoRes;
@@ -188,7 +194,7 @@ function initCopyProgram(gl) {
       copyOut = texture(originalSampler, vec2((gl_FragCoord.x - renderArea.x) / videoRes.x, 1.0 - ((gl_FragCoord.y - renderArea.y) / videoRes.y)));
     }
   }
-  `;
+`;
 
   console.log(copyFragShader);
 
@@ -198,6 +204,7 @@ function initCopyProgram(gl) {
 // Symmetrically pad a 2d texture with black
 function initPadProgram(gl, padding) {
   const padFragShader = `#version 300 es
+  #pragma vscode_glsllint_stage: frag
 
   precision mediump float;
 
@@ -261,6 +268,7 @@ function init_conv1_1_program(gl) {
   }
 
   const conv1_1_shader = `#version 300 es
+  #pragma vscode_glsllint_stage: frag
 
   precision mediump float;
 
@@ -336,6 +344,7 @@ function init_conv1_2_program(gl) {
   }
 
   const conv1_2_shader = `#version 300 es
+  #pragma vscode_glsllint_stage: frag
 
   precision mediump float;
   precision mediump sampler2D;
@@ -423,6 +432,7 @@ function init_conv2_1_program(gl) {
   }
 
   const conv2_1_shader = `#version 300 es
+  #pragma vscode_glsllint_stage: frag
 
   precision mediump float;
 
@@ -488,7 +498,8 @@ function init_conv2_2_program(gl) {
   }
 
   const conv2_2_shader = `#version 300 es
-
+  #pragma vscode_glsllint_stage: frag
+  
   precision mediump float;
 
   uniform sampler2D layer1Sampler;
@@ -562,7 +573,8 @@ function init_reconstruct_program(gl) {
   }
 
   const reconstruct_shader = `#version 300 es
-
+  #pragma vscode_glsllint_stage: frag
+  
   precision mediump float;
 
   uniform sampler2D originalSampler;
