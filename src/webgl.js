@@ -968,13 +968,9 @@ function scaleToFit(videoWidth, videoHeight, canvasWidth, canvasHeight) {
 
   if (videoHeight > videoWidth) {
     isVertical = true;
-    curWidth = videoWidth;
-    curHeight = videoHeight;
   }
 
-  const widthScale = canvasWidth / videoWidth;
-  const heightScale = canvasHeight / videoHeight;
-  const scaleFactor = Math.min(widthScale, heightScale);
+  const scaleFactor = Math.min(canvasWidth / videoWidth, canvasHeight / videoHeight);
 
   curWidth = Math.ceil(scaleFactor * curWidth);
   curHeight = Math.floor(scaleFactor * curHeight);
