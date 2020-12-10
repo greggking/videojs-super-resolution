@@ -276,8 +276,8 @@ function init_conv1_1_program(gl) {
     out1 = vec4(0.0, 0.0, 0.0, 0.0);
     out2 = vec4(0.0, 0.0, 0.0, 0.0);
     out3 = vec4(0.0, 0.0, 0.0, 0.0);
-    float outX = float(gl_FragCoord.x);
-    float outY = float(gl_FragCoord.y);
+    float outX = gl_FragCoord.x;
+    float outY = gl_FragCoord.y;
 
     vec2 videoResInverse = 1.0 / (videoRes + 8.0);
 
@@ -359,8 +359,8 @@ function init_conv1_2_program(gl) {
     out2 = vec4(0.0, 0.0, 0.0, 0.0);
     out3 = vec4(0.0, 0.0, 0.0, 0.0);
 
-    float outX = float(gl_FragCoord.x);
-    float outY = float(gl_FragCoord.y);
+    float outX = gl_FragCoord.x;
+    float outY = gl_FragCoord.y;
 
     float inWidthInverse = 1.0 / (videoRes.x + 8.0);
     float inHeightInverse = 1.0 / (videoRes.y + 4.0);
@@ -441,8 +441,8 @@ function init_conv2_1_program(gl) {
     out0 = vec4(0.0, 0.0, 0.0, 0.0);
     out1 = vec4(0.0, 0.0, 0.0, 0.0);
     
-    float outX = float(gl_FragCoord.x);
-    float outY = float(gl_FragCoord.y);
+    float outX = gl_FragCoord.x;
+    float outY = gl_FragCoord.y;
 
     vec2 videoResInverse = 1.0 / (videoRes + 4.0);
 
@@ -506,8 +506,8 @@ function init_conv2_2_program(gl) {
     out0 = vec4(0.0, 0.0, 0.0, 0.0);
     out1 = vec4(0.0, 0.0, 0.0, 0.0);
 
-    float outX = float(gl_FragCoord.x);
-    float outY = float(gl_FragCoord.y);
+    float outX = gl_FragCoord.x;
+    float outY = gl_FragCoord.y;
 
     float inWidthInverse = 1.0 / (videoRes.x + 4.0);
     float inHeightInverse = 1.0 / (videoRes.y + 2.0);
