@@ -958,21 +958,26 @@ const fitBoundingBox = (vw, vh, cw, ch) => {
   return [left, top, cw - left, ch - top];
 }
 
+/**
+ * Return the size of the video and the render area
+ *
+ * @param videoWidth
+ * @param videoHeight
+ * @param canvasWidth
+ * @param canvasHeight
+ * @returns {(number[]|[number, number, number, number])[]}
+ */
 function scaleToFit(videoWidth, videoHeight, canvasWidth, canvasHeight) {
   let curWidth = videoWidth;
   let curHeight = videoHeight;
-  let isVertical = false;
-
-  if (videoHeight > videoWidth) {
-    isVertical = true;
-  }
 
   const scaleFactor = Math.min(canvasWidth / videoWidth, canvasHeight / videoHeight);
 
   curWidth = Math.ceil(scaleFactor * curWidth);
   curHeight = Math.floor(scaleFactor * curHeight);
 
-  if (isVertical) {
+  // if video is vertical
+  if (videoHeight > videoWidth) {
     return [[curHeight, curWidth], fitBoundingBox(curHeight, curWidth, canvasWidth, canvasHeight)];
   }
   return [[curWidth, curHeight], fitBoundingBox(curWidth, curHeight, canvasWidth, canvasHeight)];
