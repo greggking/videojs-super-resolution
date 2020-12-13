@@ -270,10 +270,10 @@ function init_conv1_1_program(gl) {
   layout(location = 3) out vec4 out3;
 
   void main() {
-    out0 = vec4(0.0, 0.0, 0.0, 0.0);
-    out1 = vec4(0.0, 0.0, 0.0, 0.0);
-    out2 = vec4(0.0, 0.0, 0.0, 0.0);
-    out3 = vec4(0.0, 0.0, 0.0, 0.0);
+    out0 = vec4(0.0);
+    out1 = vec4(0.0);
+    out2 = vec4(0.0);
+    out3 = vec4(0.0);
     float outX = gl_FragCoord.x;
     float outY = gl_FragCoord.y;
 
@@ -352,10 +352,10 @@ function init_conv1_2_program(gl) {
   layout(location = 3) out vec4 out3;
 
   void main() {
-    out0 = vec4(0.0, 0.0, 0.0, 0.0);
-    out1 = vec4(0.0, 0.0, 0.0, 0.0);
-    out2 = vec4(0.0, 0.0, 0.0, 0.0);
-    out3 = vec4(0.0, 0.0, 0.0, 0.0);
+    out0 = vec4(0.0);
+    out1 = vec4(0.0);
+    out2 = vec4(0.0);
+    out3 = vec4(0.0);
 
     float outX = gl_FragCoord.x;
     float outY = gl_FragCoord.y;
@@ -429,8 +429,8 @@ function init_conv2_1_program(gl) {
   layout(location = 1) out vec4 out1;
 
   void main() {
-    out0 = vec4(0.0, 0.0, 0.0, 0.0);
-    out1 = vec4(0.0, 0.0, 0.0, 0.0);
+    out0 = vec4(0.0);
+    out1 = vec4(0.0);
     
     float outX = gl_FragCoord.x;
     float outY = gl_FragCoord.y;
@@ -494,8 +494,8 @@ function init_conv2_2_program(gl) {
   layout(location = 1) out vec4 out1;
 
   void main() {
-    out0 = vec4(0.0, 0.0, 0.0, 0.0);
-    out1 = vec4(0.0, 0.0, 0.0, 0.0);
+    out0 = vec4(0.0);
+    out1 = vec4(0.0);
 
     float outX = gl_FragCoord.x;
     float outY = gl_FragCoord.y;
