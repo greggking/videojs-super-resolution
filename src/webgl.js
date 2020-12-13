@@ -1270,20 +1270,12 @@ export function main(player, canvas, options) {
    * Draw the scene repeatedly
    */
   function render(now) {
-    console.time("render");
     if (!copyVideo) return;
 
-    console.time("updateTexture");
     updateTexture(gl, input_texture, video);
-    console.timeEnd("updateTexture");
-
-    console.time("resizeCanvas")
     resizeCanvas(canvas);
-    console.timeEnd("resizeCanvas")
 
-    console.time("scaleToFit")
     const renderSettings = scaleToFit(videoWidth, videoHeight, canvas.width, canvas.height);
-    console.timeEnd("scaleToFit")
     // console.log("renderSettings:", renderSettings);
 
     padProgramInfo.videoRes = [videoWidth, videoHeight];
@@ -1408,7 +1400,6 @@ export function main(player, canvas, options) {
 
     // Do it again!
     requestAnimationFrame(() => setTimeout(render, frameDelay));
-    console.timeEnd("render");
   }
 
   requestAnimationFrame(render);
