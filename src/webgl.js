@@ -116,7 +116,7 @@ const vsSource = `#version 300 es
   void main(void) {
       gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
   }
-`;
+  `;
 
 // creates a shader of the given type, uploads the source and compiles it.
 function loadShader(gl, type, source) {
@@ -183,7 +183,7 @@ function initCopyProgram(gl) {
       copyOut = texture(originalSampler, vec2((gl_FragCoord.x - renderArea.x) / videoRes.x, 1.0 - ((gl_FragCoord.y - renderArea.y) / videoRes.y)));
     }
   }
-`;
+  `;
 
   console.log(copyFragShader);
 
