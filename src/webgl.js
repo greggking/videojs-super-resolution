@@ -943,13 +943,19 @@ function resizeCanvas(canvas) {
   }
 }
 
-function fitBoundingBox(w, h, canvasW, canvasH) {
-  const left = Math.round((canvasW - w) * 0.5);
-  const right = canvasW - left;
-  const top = Math.round((canvasH - h) * 0.5);
-  const bottom = canvasH - top;
-
-  return [left, top, right, bottom];
+/**
+ * Returns the coordinates to center the video within the canvas
+ *
+ * @param vw
+ * @param vh
+ * @param cw
+ * @param ch
+ * @returns {[number, number, number, number]}
+ */
+const fitBoundingBox = (vw, vh, cw, ch) => {
+  let left = Math.round((cw - vw) * 0.5);
+  const top = Math.round((ch - vh) * 0.5);
+  return [left, top, cw - left, ch - top];
 }
 
 function scaleToFit(videoWidth, videoHeight, canvasWidth, canvasHeight) {
