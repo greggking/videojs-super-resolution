@@ -172,16 +172,17 @@ function initCopyProgram(gl) {
   layout(location = 0) out vec4 copyOut;
 
   void main() {
-    copyOut = vec4(0.0, 0.0, 0.0, 1.0);
+    // check if the gl_FragCoord is within the bounds of the renderArea
+    // if mask.x == 1.0 it means we are within the x bounds of renderArea, similarly for mask.y
+    vec2 mask = step(renderArea.xy, gl_FragCoord.xy) - step(renderArea.zw, gl_FragCoord.xy);
 
-    // if we are not in the padding around the video, get the texture value
-    if (gl_FragCoord.x > renderArea.x
-      && gl_FragCoord.x < renderArea.z
-      && gl_FragCoord.y > renderArea.y
-      && gl_FragCoord.y < renderArea.w
-    ) {
-      copyOut = texture(originalSampler, vec2((gl_FragCoord.x - renderArea.x) / videoRes.x, 1.0 - ((gl_FragCoord.y - renderArea.y) / videoRes.y)));
-    }
+    // align the image in the renderArea area and scale to the videoRes
+    vec2 texCoords = (gl_FragCoord.xy - renderArea.xy) / videoRes.xy;
+    // flip the texture image vertically
+    texCoords.y = 1.0 - texCoords.y;
+
+    // if mask.x and mask.y are 1.0 use the value returned from texture()  
+    copyOut = mask.x * mask.y * texture(originalSampler, texCoords);
   }
   `;
 
