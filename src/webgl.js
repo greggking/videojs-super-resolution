@@ -110,11 +110,10 @@ const vsSource = `#version 300 es
   #pragma vscode_glsllint_stage: vert
 
   in vec4 aVertexPosition;
-  uniform mat4 uModelViewMatrix;
-  uniform mat4 uProjectionMatrix;
+  uniform mat4 uProjectionModelViewMatrix;
 
   void main(void) {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+      gl_Position = uProjectionModelViewMatrix * aVertexPosition;
   }
   `;
 
@@ -754,32 +753,41 @@ function updateTexture(gl, texture, video) {
 
 // Setup the unchanging variables for drawScene
 
-// Create a perspective matrix, a special matrix that is
-// used to simulate the distortion of perspective in a camera.
-// Our field of view is 45 degrees, with a width/height
-// ratio that matches the display size of the canvas
-// and we only want to see objects between 0.1 units
-// and 100 units away from the camera.
-const zNear = 0.1;
-const zFar = 100.0;
-const projectionMatrix = mat4.create();
-mat4.ortho(projectionMatrix, -1.0, 1.0, 1.0, -1.0, zNear, zFar);
+// the multiplication of projectionMatrix and modelViewMatrix are used in the vertex shader, we compute it here once
+// and pass in the result as a uniform
 
-// Set the drawing position to the "identity" point, which is
-// the center of the scene.
-const modelViewMatrix = mat4.create();
+const projectionModelViewMatrix = mat4.create();
 
-// Now move the drawing position a bit to where we want to
-// start drawing the square.
-mat4.translate(
-  modelViewMatrix, // destination matrix
-  modelViewMatrix, // matrix to translate
-  [-0.0, 0.0, -6.0] // amount to translate
-);
+{
+  // Create a perspective matrix, a special matrix that is
+  // used to simulate the distortion of perspective in a camera.
+  // Our field of view is 45 degrees, with a width/height
+  // ratio that matches the display size of the canvas
+  // and we only want to see objects between 0.1 units
+  // and 100 units away from the camera.
+  const zNear = 0.1;
+  const zFar = 100.0;
+  const projectionMatrix = mat4.create();
+  mat4.ortho(projectionMatrix, -1.0, 1.0, 1.0, -1.0, zNear, zFar);
 
-const normalMatrix = mat4.create();
-mat4.invert(normalMatrix, modelViewMatrix);
-mat4.transpose(normalMatrix, normalMatrix);
+  // Set the drawing position to the "identity" point, which is
+  // the center of the scene.
+  const modelViewMatrix = mat4.create();
+
+  // Now move the drawing position a bit to where we want to
+  // start drawing the square.
+  mat4.translate(
+    modelViewMatrix, // destination matrix
+    modelViewMatrix, // matrix to translate
+    [-0.0, 0.0, -6.0] // amount to translate
+  );
+
+  const normalMatrix = mat4.create();
+  mat4.invert(normalMatrix, modelViewMatrix);
+  mat4.transpose(normalMatrix, normalMatrix);
+
+  mat4.multiply(projectionModelViewMatrix, projectionMatrix, modelViewMatrix);
+}
 
 /**
  * Executes the GL program with the passed buffers and texture
@@ -819,16 +827,10 @@ function drawScene(gl, programInfo, buffers, texture) {
 
   // Set the shader uniforms
   gl.uniformMatrix4fv(
-    programInfo.uniformLocations.projectionMatrix,
+    programInfo.uniformLocations.projectionModelViewMatrix,
     false,
-    projectionMatrix
+    projectionModelViewMatrix,
   );
-  gl.uniformMatrix4fv(
-    programInfo.uniformLocations.modelViewMatrix,
-    false,
-    modelViewMatrix
-  );
-
   if (programInfo.textures.length > 0) {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, programInfo.textures[0]);
@@ -1041,8 +1043,7 @@ export function main(player, canvas, options) {
       vertexPosition: gl.getAttribLocation(padProgram, 'aVertexPosition'),
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(padProgram, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(padProgram, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(padProgram, 'uProjectionModelViewMatrix'),
       videoResLocation: gl.getUniformLocation(padProgram, 'videoRes')
     },
     // 1-1 mapping between samplers and textures
@@ -1060,8 +1061,7 @@ export function main(player, canvas, options) {
       vertexPosition: gl.getAttribLocation(conv1_1_program, 'aVertexPosition'),
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(conv1_1_program, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(conv1_1_program, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(conv1_1_program, 'uProjectionModelViewMatrix'),
       weightsLocation: gl.getUniformLocation(conv1_1_program, 'weights'),
       videoResLocation: gl.getUniformLocation(conv1_1_program, 'videoRes')
     },
@@ -1081,8 +1081,7 @@ export function main(player, canvas, options) {
       vertexPosition: gl.getAttribLocation(conv1_2_program, 'aVertexPosition'),
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(conv1_2_program, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(conv1_2_program, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(conv1_2_program, 'uProjectionModelViewMatrix'),
       weightsLocation: gl.getUniformLocation(conv1_2_program, 'weights'),
       biasesLocation: gl.getUniformLocation(conv1_2_program, 'biases'),
       videoResLocation: gl.getUniformLocation(conv1_2_program, 'videoRes')
@@ -1108,8 +1107,7 @@ export function main(player, canvas, options) {
       vertexPosition: gl.getAttribLocation(conv2_1_program, 'aVertexPosition'),
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(conv2_1_program, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(conv2_1_program, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(conv2_1_program, 'uProjectionModelViewMatrix'),
       weightsLocation: gl.getUniformLocation(conv2_1_program, 'weights'),
       videoResLocation: gl.getUniformLocation(conv2_1_program, 'videoRes')
     },
@@ -1133,8 +1131,7 @@ export function main(player, canvas, options) {
       vertexPosition: gl.getAttribLocation(conv2_2_program, 'aVertexPosition'),
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(conv2_2_program, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(conv2_2_program, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(conv2_2_program, 'uProjectionModelViewMatrix'),
       weightsLocation: gl.getUniformLocation(conv2_2_program, 'weights'),
       biasesLocation: gl.getUniformLocation(conv2_2_program, 'biases'),
       videoResLocation: gl.getUniformLocation(conv2_2_program, 'videoRes')
@@ -1158,8 +1155,7 @@ export function main(player, canvas, options) {
       vertexPosition: gl.getAttribLocation(reconstruct_program, 'aVertexPosition'),
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(reconstruct_program, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(reconstruct_program, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(reconstruct_program, 'uProjectionModelViewMatrix'),
       weightsLocation: gl.getUniformLocation(reconstruct_program, 'weights'),
       biasesLocation: gl.getUniformLocation(reconstruct_program, 'biases'),
       videoResLocation: gl.getUniformLocation(reconstruct_program, 'videoRes')
@@ -1185,11 +1181,7 @@ export function main(player, canvas, options) {
       vertexPosition: gl.getAttribLocation(render_program, 'aVertexPosition')
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(
-        render_program,
-        'uProjectionMatrix'
-      ),
-      modelViewMatrix: gl.getUniformLocation(render_program, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(render_program, 'uProjectionModelViewMatrix'),
       renderAreaLocation: gl.getUniformLocation(render_program, 'renderArea'),
       videoResLocation: gl.getUniformLocation(render_program, 'videoRes')
     },
