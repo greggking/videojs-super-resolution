@@ -447,24 +447,25 @@ function init_conv2_1_program(gl) {
 // out: (width-2) x height x 4
 // kernel size 3 x 1
 function init_conv2_2_program(gl) {
-  const coords = [];
-  const inputs = [];
   const operations = [];
 
   for (let i = 0; i < 3; i++) {
-    coords.push(`vec2 coords_${i} = vec2((gl_FragCoord.x + ${i}.0) * inWidthInverse, gl_FragCoord.y * inHeightInverse);`);
-
-    inputs.push(`vec4 in${i}_0 = texture(layer1Sampler, coords_${i});`);
-    inputs.push(`vec4 in${i}_1 = texture(layer2Sampler, coords_${i});`);
-
-    operations.push(`out0.r += dot(in${i}_0, weights[${i * 8 * 2 + 0}]) + dot(in${i}_1, weights[${i * 8 * 2 + 1}]);`);
-    operations.push(`out0.g += dot(in${i}_0, weights[${i * 8 * 2 + 2}]) + dot(in${i}_1, weights[${i * 8 * 2 + 3}]);`);
-    operations.push(`out0.b += dot(in${i}_0, weights[${i * 8 * 2 + 4}]) + dot(in${i}_1, weights[${i * 8 * 2 + 5}]);`);
-    operations.push(`out0.a += dot(in${i}_0, weights[${i * 8 * 2 + 6}]) + dot(in${i}_1, weights[${i * 8 * 2 + 7}]);`);
-    operations.push(`out1.r += dot(in${i}_0, weights[${i * 8 * 2 + 8}]) + dot(in${i}_1, weights[${i * 8 * 2 + 9}]);`);
-    operations.push(`out1.g += dot(in${i}_0, weights[${i * 8 * 2 + 10}]) + dot(in${i}_1, weights[${i * 8 * 2 + 11}]);`);
-    operations.push(`out1.b += dot(in${i}_0, weights[${i * 8 * 2 + 12}]) + dot(in${i}_1, weights[${i * 8 * 2 + 13}]);`);
-    operations.push(`out1.a += dot(in${i}_0, weights[${i * 8 * 2 + 14}]) + dot(in${i}_1, weights[${i * 8 * 2 + 15}]);`);
+    operations.push(`
+      coords = vec2((gl_FragCoord.x + ${i}.0) * inWidthInverse, gl_FragCoord.y * inHeightInverse);
+      
+      in_0 = texture(layer1Sampler, coords);
+      in_1 = texture(layer2Sampler, coords);
+      
+      out0.rgba += vec4(dot(in_0, weights[${i * 8 * 2 + 0}]) + dot(in_1, weights[${i * 8 * 2 + 1}]),
+                        dot(in_0, weights[${i * 8 * 2 + 2}]) + dot(in_1, weights[${i * 8 * 2 + 3}]),
+                        dot(in_0, weights[${i * 8 * 2 + 4}]) + dot(in_1, weights[${i * 8 * 2 + 5}]),
+                        dot(in_0, weights[${i * 8 * 2 + 6}]) + dot(in_1, weights[${i * 8 * 2 + 7}]));
+      
+      out1.rgba += vec4(dot(in_0, weights[${i * 8 * 2 + 8}]) + dot(in_1, weights[${i * 8 * 2 + 9}]),
+                        dot(in_0, weights[${i * 8 * 2 + 10}]) + dot(in_1, weights[${i * 8 * 2 + 11}]),
+                        dot(in_0, weights[${i * 8 * 2 + 12}]) + dot(in_1, weights[${i * 8 * 2 + 13}]),
+                        dot(in_0, weights[${i * 8 * 2 + 14}]) + dot(in_1, weights[${i * 8 * 2 + 15}]));
+    `);
   }
 
   const conv2_2_shader = `#version 300 es
@@ -482,21 +483,20 @@ function init_conv2_2_program(gl) {
   layout(location = 0) out vec4 out0;
   layout(location = 1) out vec4 out1;
 
-  void main() {
+  void main() {    
+    vec2 coords = vec2(0.0);
+    vec4 in_0 = vec4(0.0);
+    vec4 in_1 = vec4(0.0);  
+  
     out0 = vec4(0.0);
     out1 = vec4(0.0);
-
+    
+    // divisions are more expensive than multiplications, calculate it once and use it as a multiplication many times 
     float inWidthInverse = 1.0 / (videoRes.x + 4.0);
     float inHeightInverse = 1.0 / (videoRes.y + 2.0);
 
-    // Coords
-${coords.join("\n")}
-
-    // Inputs
-${inputs.join("\n")}
-
     // Operations
-${operations.join("\n")}
+    ${operations.join("\n")}
 
     out0 = max(out0 + biases[0], 0.0);
     out1 = max(out1 + biases[1], 0.0);
