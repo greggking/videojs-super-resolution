@@ -295,34 +295,37 @@ ${operations.join("\n")}
 // out: (width-4) x height x 8
 // kernel size 5x1
 function init_conv1_2_program(gl) {
-  const coords = [];
-  const inputs = [];
   const operations = [];
 
   for (let i = 0; i < layer_1_width; i++) {
-    coords.push(`vec2 coords_${i} = vec2((gl_FragCoord.x + ${i}.0) * inWidthInverse, gl_FragCoord.y * inHeightInverse);`);
+    operations.push(`
+      coords = vec2((gl_FragCoord.x + ${i}.0) * inWidthInverse, gl_FragCoord.y * inHeightInverse);
 
-    inputs.push(`vec4 in${i}_0 = texture(layer1Sampler, coords_${i});`);
-    inputs.push(`vec4 in${i}_1 = texture(layer2Sampler, coords_${i});`);
-    inputs.push(`vec4 in${i}_2 = texture(layer3Sampler, coords_${i});`);
-    inputs.push(`vec4 in${i}_3 = texture(layer4Sampler, coords_${i});`);
+      in_0 = texture(layer1Sampler, coords);
+      in_1 = texture(layer2Sampler, coords);
+      in_2 = texture(layer3Sampler, coords);
+      in_3 = texture(layer4Sampler, coords);
 
-    operations.push(`out0.r += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 0}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 1}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 2}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 3}]);`);
-    operations.push(`out0.g += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 4}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 5}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 6}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 7}]);`);
-    operations.push(`out0.b += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 8}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 9}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 10}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 11}]);`);
-    operations.push(`out0.a += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 12}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 13}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 14}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 15}]);`);
-    operations.push(`out1.r += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 16}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 17}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 18}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 19}]);`);
-    operations.push(`out1.g += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 20}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 21}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 22}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 23}]);`);
-    operations.push(`out1.b += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 24}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 25}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 26}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 27}]);`);
-    operations.push(`out1.a += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 28}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 29}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 30}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 31}]);`);
-    operations.push(`out2.r += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 32}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 33}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 34}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 35}]);`);
-    operations.push(`out2.g += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 36}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 37}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 38}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 39}]);`);
-    operations.push(`out2.b += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 40}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 41}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 42}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 43}]);`);
-    operations.push(`out2.a += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 44}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 45}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 46}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 47}]);`);
-    operations.push(`out3.r += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 48}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 49}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 50}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 51}]);`);
-    operations.push(`out3.g += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 52}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 53}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 54}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 55}]);`);
-    operations.push(`out3.b += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 56}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 57}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 58}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 59}]);`);
-    operations.push(`out3.a += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 60}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 61}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 62}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 63}]);`);
+      out0.rgba += vec4(dot(in_0, weights[${i * layer_1_depth * 4 + 0}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 1}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 2}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 3}]),
+                        dot(in_0, weights[${i * layer_1_depth * 4 + 4}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 5}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 6}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 7}]),
+                        dot(in_0, weights[${i * layer_1_depth * 4 + 8}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 9}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 10}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 11}]),
+                        dot(in_0, weights[${i * layer_1_depth * 4 + 12}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 13}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 14}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 15}]));
+      
+      out1.rgba += vec4(dot(in_0, weights[${i * layer_1_depth * 4 + 16}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 17}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 18}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 19}]),
+                        dot(in_0, weights[${i * layer_1_depth * 4 + 20}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 21}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 22}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 23}]),
+                        dot(in_0, weights[${i * layer_1_depth * 4 + 24}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 25}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 26}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 27}]),
+                        dot(in_0, weights[${i * layer_1_depth * 4 + 28}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 29}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 30}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 31}]));
+      
+      out2.rgba += vec4(dot(in_0, weights[${i * layer_1_depth * 4 + 32}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 33}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 34}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 35}]),
+                        dot(in_0, weights[${i * layer_1_depth * 4 + 36}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 37}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 38}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 39}]),
+                        dot(in_0, weights[${i * layer_1_depth * 4 + 40}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 41}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 42}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 43}]),
+                        dot(in_0, weights[${i * layer_1_depth * 4 + 44}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 45}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 46}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 47}]));
+                        
+      out3.rgba += vec4(dot(in_0, weights[${i * layer_1_depth * 4 + 48}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 49}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 50}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 51}]),
+                        dot(in_0, weights[${i * layer_1_depth * 4 + 52}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 53}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 54}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 55}]),
+                        dot(in_0, weights[${i * layer_1_depth * 4 + 56}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 57}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 58}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 59}]),
+                        dot(in_0, weights[${i * layer_1_depth * 4 + 60}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 61}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 62}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 63}]));
+    `);
   }
 
   const conv1_2_shader = `#version 300 es
@@ -346,6 +349,12 @@ function init_conv1_2_program(gl) {
   layout(location = 3) out vec4 out3;
 
   void main() {
+    vec2 coords = vec2(0.0);
+    vec4 in_0 = vec4(0.0);
+    vec4 in_1 = vec4(0.0);
+    vec4 in_2 = vec4(0.0);
+    vec4 in_3 = vec4(0.0);
+
     out0 = vec4(0.0);
     out1 = vec4(0.0);
     out2 = vec4(0.0);
@@ -354,14 +363,8 @@ function init_conv1_2_program(gl) {
     float inWidthInverse = 1.0 / (videoRes.x + 8.0);
     float inHeightInverse = 1.0 / (videoRes.y + 4.0);
 
-    // Coords
-${coords.join("\n")}
-
-    // Inputs
-${inputs.join("\n")}
-
     // Operations
-${operations.join("\n")}
+    ${operations.join("\n")}
 
     out0 = max(out0 + biases[0], 0.0);
     out1 = max(out1 + biases[1], 0.0);
