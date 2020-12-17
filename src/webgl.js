@@ -381,6 +381,29 @@ ${operations.join("\n")}
 // out: width x (height - 2) x 8
 // kernel size 1 x 3
 function init_conv2_1_program(gl) {
+  const operations = [];
+
+  for (let i = 0; i < layer_2_width; i++) {
+    operations.push(`
+      coords = vec2(gl_FragCoord.x * videoResInverse.x, (gl_FragCoord.y + ${i}.0) * videoResInverse.y);
+
+      in_0 = texture(layer1Sampler, coords);
+      in_1 = texture(layer2Sampler, coords);
+      in_2 = texture(layer3Sampler, coords);
+      in_3 = texture(layer4Sampler, coords);
+
+      out0.rgba += vec4(dot(in_0, weights[${i * layer_2_depth * 4 + 0}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 1}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 2}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 3}]),
+                        dot(in_0, weights[${i * layer_2_depth * 4 + 4}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 5}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 6}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 7}]),
+                        dot(in_0, weights[${i * layer_2_depth * 4 + 8}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 9}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 10}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 11}]),
+                        dot(in_0, weights[${i * layer_2_depth * 4 + 12}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 13}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 14}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 15}]));
+      
+      out1.rgba += vec4(dot(in_0, weights[${i * layer_2_depth * 4 + 16}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 17}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 18}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 19}]),
+                        dot(in_0, weights[${i * layer_2_depth * 4 + 20}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 21}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 22}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 23}]),
+                        dot(in_0, weights[${i * layer_2_depth * 4 + 24}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 25}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 26}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 27}]),
+                        dot(in_0, weights[${i * layer_2_depth * 4 + 28}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 29}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 30}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 31}]));
+    `);
+  }
+
   const conv2_1_shader = `#version 300 es
   #pragma vscode_glsllint_stage: frag
 
@@ -397,35 +420,20 @@ function init_conv2_1_program(gl) {
   layout(location = 0) out vec4 out0;
   layout(location = 1) out vec4 out1;
 
-  void getOuts(in int i, in vec2 videoResInverse, inout vec4 out0, inout vec4 out1) {
-    vec2 coords = vec2(gl_FragCoord.x * videoResInverse.x, (gl_FragCoord.y + float(i)) * videoResInverse.y);
-    
-    vec4 in_0 = texture(layer1Sampler, coords);
-    vec4 in_1 = texture(layer2Sampler, coords);
-    vec4 in_2 = texture(layer3Sampler, coords);
-    vec4 in_3 = texture(layer4Sampler, coords);
-
-    int offset = (i * ${layer_2_depth} * 4);
-    out0.rgba += vec4(dot(in_0, weights[offset + 0]) + dot(in_1, weights[offset + 1]) + dot(in_2, weights[offset + 2]) + dot(in_3, weights[offset + 3]),
-                      dot(in_0, weights[offset + 4]) + dot(in_1, weights[offset + 5]) + dot(in_2, weights[offset + 6]) + dot(in_3, weights[offset + 7]),
-                      dot(in_0, weights[offset + 8]) + dot(in_1, weights[offset + 9]) + dot(in_2, weights[offset + 10]) + dot(in_3, weights[offset + 11]),
-                      dot(in_0, weights[offset + 12]) + dot(in_1, weights[offset + 13]) + dot(in_2, weights[offset + 14]) + dot(in_3, weights[offset + 15]));
-    
-    out1.rgba += vec4(dot(in_0, weights[offset + 16]) + dot(in_1, weights[offset + 17]) + dot(in_2, weights[offset + 18]) + dot(in_3, weights[offset + 19]),
-                      dot(in_0, weights[offset + 20]) + dot(in_1, weights[offset + 21]) + dot(in_2, weights[offset + 22]) + dot(in_3, weights[offset + 23]),
-                      dot(in_0, weights[offset + 24]) + dot(in_1, weights[offset + 25]) + dot(in_2, weights[offset + 26]) + dot(in_3, weights[offset + 27]),
-                      dot(in_0, weights[offset + 28]) + dot(in_1, weights[offset + 29]) + dot(in_2, weights[offset + 30]) + dot(in_3, weights[offset + 31]));
-  }
-
   void main() {
+    vec2 coords = vec2(0.0);
+    vec4 in_0 = vec4(0.0);
+    vec4 in_1 = vec4(0.0);
+    vec4 in_2 = vec4(0.0);
+    vec4 in_3 = vec4(0.0);
+  
     out0 = vec4(0.0);
     out1 = vec4(0.0);
 
     vec2 videoResInverse = 1.0 / (videoRes + 4.0);
 
-    for (int i = 0; i < ${layer_2_width}; i++) {
-        getOuts(i, videoResInverse, out0, out1);
-    }
+    // Operations
+    ${operations.join("\n")}
   }
   `;
 
