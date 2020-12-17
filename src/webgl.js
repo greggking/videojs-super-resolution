@@ -225,30 +225,34 @@ function initPadProgram(gl, padding) {
 // out: width x (height-4) x 16
 // kernel size 1x5
 function init_conv1_1_program(gl) {
-  const coords = [];
-  const inputs = [];
   const operations = [];
 
   for (let i = 0; i < 5; i++) {
-    coords.push(`vec2 coords_${i} = vec2(gl_FragCoord.x * videoResInverse.x, (gl_FragCoord.y + ${i}.0) * videoResInverse.y);`);
-    inputs.push(`vec4 in${i} = texture(padSampler, coords_${i});`);
+    operations.push(`
+      coords = vec2(gl_FragCoord.x * videoResInverse.x, (gl_FragCoord.y + ${i}.0) * videoResInverse.y);
 
-    operations.push(`out0.r += dot(in${i}.rgb, weights[${i * layer_1_depth + 0}].rgb);`);
-    operations.push(`out0.g += dot(in${i}.rgb, weights[${i * layer_1_depth + 1}].rgb);`);
-    operations.push(`out0.b += dot(in${i}.rgb, weights[${i * layer_1_depth + 2}].rgb);`);
-    operations.push(`out0.a += dot(in${i}.rgb, weights[${i * layer_1_depth + 3}].rgb);`);
-    operations.push(`out1.r += dot(in${i}.rgb, weights[${i * layer_1_depth + 4}].rgb);`);
-    operations.push(`out1.g += dot(in${i}.rgb, weights[${i * layer_1_depth + 5}].rgb);`);
-    operations.push(`out1.b += dot(in${i}.rgb, weights[${i * layer_1_depth + 6}].rgb);`);
-    operations.push(`out1.a += dot(in${i}.rgb, weights[${i * layer_1_depth + 7}].rgb);`);
-    operations.push(`out2.r += dot(in${i}.rgb, weights[${i * layer_1_depth + 8}].rgb);`);
-    operations.push(`out2.g += dot(in${i}.rgb, weights[${i * layer_1_depth + 9}].rgb);`);
-    operations.push(`out2.b += dot(in${i}.rgb, weights[${i * layer_1_depth + 10}].rgb);`);
-    operations.push(`out2.a += dot(in${i}.rgb, weights[${i * layer_1_depth + 11}].rgb);`);
-    operations.push(`out3.r += dot(in${i}.rgb, weights[${i * layer_1_depth + 12}].rgb);`);
-    operations.push(`out3.g += dot(in${i}.rgb, weights[${i * layer_1_depth + 13}].rgb);`);
-    operations.push(`out3.b += dot(in${i}.rgb, weights[${i * layer_1_depth + 14}].rgb);`);
-    operations.push(`out3.a += dot(in${i}.rgb, weights[${i * layer_1_depth + 15}].rgb);`);
+      in_0 = texture(padSampler, coords);
+      
+      out0.rgba += vec4(dot(in_0.rgb, weights[${i * layer_1_depth + 0}].rgb),
+                        dot(in_0.rgb, weights[${i * layer_1_depth + 1}].rgb),
+                        dot(in_0.rgb, weights[${i * layer_1_depth + 2}].rgb),
+                        dot(in_0.rgb, weights[${i * layer_1_depth + 3}].rgb));
+      
+      out1.rgba += vec4(dot(in_0.rgb, weights[${i * layer_1_depth + 4}].rgb),
+                        dot(in_0.rgb, weights[${i * layer_1_depth + 5}].rgb),
+                        dot(in_0.rgb, weights[${i * layer_1_depth + 6}].rgb),
+                        dot(in_0.rgb, weights[${i * layer_1_depth + 7}].rgb));
+      
+      out2.rgba += vec4(dot(in_0.rgb, weights[${i * layer_1_depth + 8}].rgb),
+                        dot(in_0.rgb, weights[${i * layer_1_depth + 9}].rgb),
+                        dot(in_0.rgb, weights[${i * layer_1_depth + 10}].rgb),
+                        dot(in_0.rgb, weights[${i * layer_1_depth + 11}].rgb));
+      
+      out3.rgba += vec4(dot(in_0.rgb, weights[${i * layer_1_depth + 12}].rgb),
+                        dot(in_0.rgb, weights[${i * layer_1_depth + 13}].rgb),
+                        dot(in_0.rgb, weights[${i * layer_1_depth + 14}].rgb),
+                        dot(in_0.rgb, weights[${i * layer_1_depth + 15}].rgb));
+    `);
   }
 
   const conv1_1_shader = `#version 300 es
@@ -266,6 +270,9 @@ function init_conv1_1_program(gl) {
   layout(location = 3) out vec4 out3;
 
   void main() {
+    vec2 coords = vec2(0.0);
+    vec4 in_0 = vec4(0.0);
+
     out0 = vec4(0.0);
     out1 = vec4(0.0);
     out2 = vec4(0.0);
@@ -273,14 +280,8 @@ function init_conv1_1_program(gl) {
 
     vec2 videoResInverse = 1.0 / (videoRes + 8.0);
 
-    // Coords
-${coords.join("\n")}
-
-    // Inputs
-${inputs.join("\n")}
-
     // Operations
-${operations.join("\n")}
+    ${operations.join("\n")}
   }
   `;
 
