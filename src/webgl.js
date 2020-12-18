@@ -157,39 +157,6 @@ function initShaderProgram(gl, vsSource, fsSource) {
 /**
  * WebGL Shaders
  */
-function initCopyProgram(gl) {
-  const copyFragShader = `#version 300 es
-  #pragma vscode_glsllint_stage: frag
-
-  precision mediump float;
-
-  uniform sampler2D originalSampler;
-
-  uniform vec2 videoRes;
-  uniform vec4 renderArea;
-
-  layout(location = 0) out vec4 copyOut;
-
-  void main() {
-    // check if the gl_FragCoord is within the bounds of the renderArea
-    // if mask.x == 1.0 it means we are within the x bounds of renderArea, similarly for mask.y
-    vec2 mask = step(renderArea.xy, gl_FragCoord.xy) - step(renderArea.zw, gl_FragCoord.xy);
-
-    // align the image in the renderArea area and scale to the videoRes
-    vec2 texCoords = (gl_FragCoord.xy - renderArea.xy) / videoRes.xy;
-    // flip the texture image vertically
-    texCoords.y = 1.0 - texCoords.y;
-
-    // if mask.x and mask.y are 1.0 use the value returned from texture()  
-    copyOut = mask.x * mask.y * texture(originalSampler, texCoords);
-  }
-  `;
-
-  console.log(copyFragShader);
-
-  return initShaderProgram(gl, vsSource, copyFragShader);
-}
-
 // Symmetrically pad a 2d texture with black
 function initPadProgram(gl, padding) {
   const padFragShader = `#version 300 es
@@ -592,6 +559,40 @@ ${operations.join("\n")}
 
   return initShaderProgram(gl, vsSource, reconstruct_shader);
 }
+
+function initRenderProgram(gl) {
+  const renderFragShader = `#version 300 es
+  #pragma vscode_glsllint_stage: frag
+
+  precision mediump float;
+
+  uniform sampler2D originalSampler;
+
+  uniform vec2 videoRes;
+  uniform vec4 renderArea;
+
+  layout(location = 0) out vec4 copyOut;
+
+  void main() {
+    // check if the gl_FragCoord is within the bounds of the renderArea
+    // if mask.x == 1.0 it means we are within the x bounds of renderArea, similarly for mask.y
+    vec2 mask = step(renderArea.xy, gl_FragCoord.xy) - step(renderArea.zw, gl_FragCoord.xy);
+
+    // align the image in the renderArea area and scale to the videoRes
+    vec2 texCoords = (gl_FragCoord.xy - renderArea.xy) / videoRes.xy;
+    // flip the texture image vertically
+    texCoords.y = 1.0 - texCoords.y;
+
+    // if mask.x and mask.y are 1.0 use the value returned from texture()  
+    copyOut = mask.x * mask.y * texture(originalSampler, texCoords);
+  }
+  `;
+
+  console.log(renderFragShader);
+
+  return initShaderProgram(gl, vsSource, renderFragShader);
+}
+
 
 function initBuffers(gl) {
   // Create a buffer for the cube's vertex positions.
@@ -1179,7 +1180,7 @@ export function main(player, canvas, options) {
   };
 
   console.log('Render program');
-  const render_program = initCopyProgram(gl);
+  const render_program = initRenderProgram(gl);
   const render_program_info = {
     program: render_program,
     attribLocations: {
