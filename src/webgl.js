@@ -248,7 +248,6 @@ function init_conv1_1_program(gl) {
 
     vec2 videoResInverse = 1.0 / (videoRes + 8.0);
 
-    // Operations
     ${operations.join("\n")}
   }
   `;
@@ -332,7 +331,6 @@ function init_conv1_2_program(gl) {
     float inWidthInverse = 1.0 / (videoRes.x + 8.0);
     float inHeightInverse = 1.0 / (videoRes.y + 4.0);
 
-    // Operations
     ${operations.join("\n")}
 
     out0 = max(out0 + biases[0], 0.0);
@@ -404,7 +402,6 @@ function init_conv2_1_program(gl) {
 
     vec2 videoResInverse = 1.0 / (videoRes + 4.0);
 
-    // Operations
     ${operations.join("\n")}
   }
   `;
@@ -467,7 +464,6 @@ function init_conv2_2_program(gl) {
     float inWidthInverse = 1.0 / (videoRes.x + 4.0);
     float inHeightInverse = 1.0 / (videoRes.y + 2.0);
 
-    // Operations
     ${operations.join("\n")}
 
     out0 = max(out0 + biases[0], 0.0);
@@ -538,16 +534,12 @@ function init_reconstruct_program(gl) {
     vec2 fIn = vec2(gl_FragCoord - float(iOut) + 1.0) * oneThird;
     vec2 videoResInverse = 1.0 / (videoRes + 2.0);
 
-    // Coords
 ${coords.join("\n")}
 
-    // Inputs
 ${inputs.join("\n")}
 
-    // Weights
 ${weights.join("\n")}
 
-    // Operations
 ${operations.join("\n")}
 
     out0.rgb = (out0.rgb + biases[3 * iOut.y + iOut.x].rgb) * oneTwoFiftyFifth;
