@@ -198,27 +198,27 @@ function init_conv1_1_program(gl) {
     operations.push(`
       coords = vec2(gl_FragCoord.x * videoResInverse.x, (gl_FragCoord.y + ${i}.0) * videoResInverse.y);
 
-      in_0 = texture(padSampler, coords);
+      texData = texture(padSampler, coords);
       
-      out0.rgba += vec4(dot(in_0.rgb, weights[${i * layer_1_depth + 0}].rgb),
-                        dot(in_0.rgb, weights[${i * layer_1_depth + 1}].rgb),
-                        dot(in_0.rgb, weights[${i * layer_1_depth + 2}].rgb),
-                        dot(in_0.rgb, weights[${i * layer_1_depth + 3}].rgb));
+      out0.rgba += vec4(dot(texData.rgb, weights[${i * layer_1_depth + 0}].rgb),
+                        dot(texData.rgb, weights[${i * layer_1_depth + 1}].rgb),
+                        dot(texData.rgb, weights[${i * layer_1_depth + 2}].rgb),
+                        dot(texData.rgb, weights[${i * layer_1_depth + 3}].rgb));
       
-      out1.rgba += vec4(dot(in_0.rgb, weights[${i * layer_1_depth + 4}].rgb),
-                        dot(in_0.rgb, weights[${i * layer_1_depth + 5}].rgb),
-                        dot(in_0.rgb, weights[${i * layer_1_depth + 6}].rgb),
-                        dot(in_0.rgb, weights[${i * layer_1_depth + 7}].rgb));
+      out1.rgba += vec4(dot(texData.rgb, weights[${i * layer_1_depth + 4}].rgb),
+                        dot(texData.rgb, weights[${i * layer_1_depth + 5}].rgb),
+                        dot(texData.rgb, weights[${i * layer_1_depth + 6}].rgb),
+                        dot(texData.rgb, weights[${i * layer_1_depth + 7}].rgb));
       
-      out2.rgba += vec4(dot(in_0.rgb, weights[${i * layer_1_depth + 8}].rgb),
-                        dot(in_0.rgb, weights[${i * layer_1_depth + 9}].rgb),
-                        dot(in_0.rgb, weights[${i * layer_1_depth + 10}].rgb),
-                        dot(in_0.rgb, weights[${i * layer_1_depth + 11}].rgb));
+      out2.rgba += vec4(dot(texData.rgb, weights[${i * layer_1_depth + 8}].rgb),
+                        dot(texData.rgb, weights[${i * layer_1_depth + 9}].rgb),
+                        dot(texData.rgb, weights[${i * layer_1_depth + 10}].rgb),
+                        dot(texData.rgb, weights[${i * layer_1_depth + 11}].rgb));
       
-      out3.rgba += vec4(dot(in_0.rgb, weights[${i * layer_1_depth + 12}].rgb),
-                        dot(in_0.rgb, weights[${i * layer_1_depth + 13}].rgb),
-                        dot(in_0.rgb, weights[${i * layer_1_depth + 14}].rgb),
-                        dot(in_0.rgb, weights[${i * layer_1_depth + 15}].rgb));
+      out3.rgba += vec4(dot(texData.rgb, weights[${i * layer_1_depth + 12}].rgb),
+                        dot(texData.rgb, weights[${i * layer_1_depth + 13}].rgb),
+                        dot(texData.rgb, weights[${i * layer_1_depth + 14}].rgb),
+                        dot(texData.rgb, weights[${i * layer_1_depth + 15}].rgb));
     `);
   }
 
@@ -238,7 +238,7 @@ function init_conv1_1_program(gl) {
 
   void main() {
     vec2 coords = vec2(0.0);
-    vec4 in_0 = vec4(0.0);
+    vec4 texData = vec4(0.0);
 
     out0 = vec4(0.0);
     out1 = vec4(0.0);
