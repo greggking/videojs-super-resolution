@@ -169,13 +169,15 @@ function initPadProgram(gl, padding) {
 
   vec2 padding = vec2(${padding});
   layout(location = 0) out vec4 padOut;
+  
+  const vec2 neg1 = vec2(-1.0);
 
   void main() {
     // mask.xy == (1.0, 1.0) when inside the padding
-    vec2 mask = step(padding.xy, gl_FragCoord.xy) - step(videoRes.xy + padding, gl_FragCoord.xy);
+    vec2 mask = step(padding, gl_FragCoord.xy) - step(videoRes + padding, gl_FragCoord.xy);
 
     // adjust texture coords to account for padding
-    vec2 coords = (padding * vec2(-1.0) + gl_FragCoord.xy) / videoRes.xy;    
+    vec2 coords = (padding * neg1 + gl_FragCoord.xy) / videoRes.xy;    
 
     padOut = mask.x * mask.y * texture(originalSampler, coords) * 255.0;
   }
