@@ -195,32 +195,34 @@ function initPadProgram(gl, padding) {
 // kernel size 1x5
 function init_conv1_1_program(gl) {
   const operations = [];
+  let pageOffset = 0;
 
   for (let i = 0; i < 5; i++) {
+    pageOffset = i * layer_1_depth;
     operations.push(`
       coords = vec2(gl_FragCoord.x * videoResInverse.x, (gl_FragCoord.y + ${i}.0) * videoResInverse.y);
 
       texData = texture(padSampler, coords).rgb;
       
-      out0 += vec4(dot(texData, weights[${i * layer_1_depth + 0}]),
-                        dot(texData, weights[${i * layer_1_depth + 1}]),
-                        dot(texData, weights[${i * layer_1_depth + 2}]),
-                        dot(texData, weights[${i * layer_1_depth + 3}]));
+      out0 += vec4(dot(texData, weights[${pageOffset}]),
+                   dot(texData, weights[${pageOffset + 1}]),
+                   dot(texData, weights[${pageOffset + 2}]),
+                   dot(texData, weights[${pageOffset + 3}]));
       
-      out1 += vec4(dot(texData, weights[${i * layer_1_depth + 4}]),
-                        dot(texData, weights[${i * layer_1_depth + 5}]),
-                        dot(texData, weights[${i * layer_1_depth + 6}]),
-                        dot(texData, weights[${i * layer_1_depth + 7}]));
+      out1 += vec4(dot(texData, weights[${pageOffset + 4}]),
+                   dot(texData, weights[${pageOffset + 5}]),
+                   dot(texData, weights[${pageOffset + 6}]),
+                   dot(texData, weights[${pageOffset + 7}]));
       
-      out2 += vec4(dot(texData, weights[${i * layer_1_depth + 8}]),
-                        dot(texData, weights[${i * layer_1_depth + 9}]),
-                        dot(texData, weights[${i * layer_1_depth + 10}]),
-                        dot(texData, weights[${i * layer_1_depth + 11}]));
+      out2 += vec4(dot(texData, weights[${pageOffset + 8}]),
+                   dot(texData, weights[${pageOffset + 9}]),
+                   dot(texData, weights[${pageOffset + 10}]),
+                   dot(texData, weights[${pageOffset + 11}]));
       
-      out3 += vec4(dot(texData, weights[${i * layer_1_depth + 12}]),
-                        dot(texData, weights[${i * layer_1_depth + 13}]),
-                        dot(texData, weights[${i * layer_1_depth + 14}]),
-                        dot(texData, weights[${i * layer_1_depth + 15}]));
+      out3 += vec4(dot(texData, weights[${pageOffset + 12}]),
+                   dot(texData, weights[${pageOffset + 13}]),
+                   dot(texData, weights[${pageOffset + 14}]),
+                   dot(texData, weights[${pageOffset + 15}]));
     `);
   }
 
@@ -265,8 +267,10 @@ function init_conv1_1_program(gl) {
 // kernel size 5x1
 function init_conv1_2_program(gl) {
   const operations = [];
+  let pageOffset = 0;
 
   for (let i = 0; i < layer_1_width; i++) {
+    pageOffset = i * layer_1_depth * 4;
     operations.push(`
       coords = vec2((gl_FragCoord.x + ${i}.0) * inWidthInverse, gl_FragCoord.y * inHeightInverse);
 
@@ -275,25 +279,25 @@ function init_conv1_2_program(gl) {
       in_2 = texture(layer3Sampler, coords);
       in_3 = texture(layer4Sampler, coords);
 
-      out0 += vec4(dot(in_0, weights[${i * layer_1_depth * 4 + 0}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 1}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 2}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 3}]),
-                        dot(in_0, weights[${i * layer_1_depth * 4 + 4}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 5}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 6}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 7}]),
-                        dot(in_0, weights[${i * layer_1_depth * 4 + 8}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 9}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 10}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 11}]),
-                        dot(in_0, weights[${i * layer_1_depth * 4 + 12}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 13}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 14}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 15}]));
+      out0 += vec4(dot(in_0, weights[${pageOffset}]) + dot(in_1, weights[${pageOffset + 1}]) + dot(in_2, weights[${pageOffset + 2}]) + dot(in_3, weights[${pageOffset + 3}]), 
+                   dot(in_0, weights[${pageOffset + 4}]) + dot(in_1, weights[${pageOffset + 5}]) + dot(in_2, weights[${pageOffset + 6}]) + dot(in_3, weights[${pageOffset + 7}]),
+                   dot(in_0, weights[${pageOffset + 8}]) + dot(in_1, weights[${pageOffset + 9}]) + dot(in_2, weights[${pageOffset + 10}]) + dot(in_3, weights[${pageOffset + 11}]),
+                   dot(in_0, weights[${pageOffset + 12}]) + dot(in_1, weights[${pageOffset + 13}]) + dot(in_2, weights[${pageOffset + 14}]) + dot(in_3, weights[${pageOffset + 15}]));
       
-      out1 += vec4(dot(in_0, weights[${i * layer_1_depth * 4 + 16}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 17}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 18}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 19}]),
-                        dot(in_0, weights[${i * layer_1_depth * 4 + 20}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 21}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 22}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 23}]),
-                        dot(in_0, weights[${i * layer_1_depth * 4 + 24}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 25}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 26}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 27}]),
-                        dot(in_0, weights[${i * layer_1_depth * 4 + 28}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 29}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 30}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 31}]));
+      out1 += vec4(dot(in_0, weights[${pageOffset + 16}]) + dot(in_1, weights[${pageOffset + 17}]) + dot(in_2, weights[${pageOffset + 18}]) + dot(in_3, weights[${pageOffset + 19}]),
+                   dot(in_0, weights[${pageOffset + 20}]) + dot(in_1, weights[${pageOffset + 21}]) + dot(in_2, weights[${pageOffset + 22}]) + dot(in_3, weights[${pageOffset + 23}]),
+                   dot(in_0, weights[${pageOffset + 24}]) + dot(in_1, weights[${pageOffset + 25}]) + dot(in_2, weights[${pageOffset + 26}]) + dot(in_3, weights[${pageOffset + 27}]),
+                   dot(in_0, weights[${pageOffset + 28}]) + dot(in_1, weights[${pageOffset + 29}]) + dot(in_2, weights[${pageOffset + 30}]) + dot(in_3, weights[${pageOffset + 31}]));
       
-      out2 += vec4(dot(in_0, weights[${i * layer_1_depth * 4 + 32}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 33}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 34}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 35}]),
-                        dot(in_0, weights[${i * layer_1_depth * 4 + 36}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 37}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 38}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 39}]),
-                        dot(in_0, weights[${i * layer_1_depth * 4 + 40}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 41}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 42}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 43}]),
-                        dot(in_0, weights[${i * layer_1_depth * 4 + 44}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 45}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 46}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 47}]));
+      out2 += vec4(dot(in_0, weights[${pageOffset + 32}]) + dot(in_1, weights[${pageOffset + 33}]) + dot(in_2, weights[${pageOffset + 34}]) + dot(in_3, weights[${pageOffset + 35}]),
+                   dot(in_0, weights[${pageOffset + 36}]) + dot(in_1, weights[${pageOffset + 37}]) + dot(in_2, weights[${pageOffset + 38}]) + dot(in_3, weights[${pageOffset + 39}]),
+                   dot(in_0, weights[${pageOffset + 40}]) + dot(in_1, weights[${pageOffset + 41}]) + dot(in_2, weights[${pageOffset + 42}]) + dot(in_3, weights[${pageOffset + 43}]),
+                   dot(in_0, weights[${pageOffset + 44}]) + dot(in_1, weights[${pageOffset + 45}]) + dot(in_2, weights[${pageOffset + 46}]) + dot(in_3, weights[${pageOffset + 47}]));
                         
-      out3 += vec4(dot(in_0, weights[${i * layer_1_depth * 4 + 48}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 49}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 50}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 51}]),
-                        dot(in_0, weights[${i * layer_1_depth * 4 + 52}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 53}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 54}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 55}]),
-                        dot(in_0, weights[${i * layer_1_depth * 4 + 56}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 57}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 58}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 59}]),
-                        dot(in_0, weights[${i * layer_1_depth * 4 + 60}]) + dot(in_1, weights[${i * layer_1_depth * 4 + 61}]) + dot(in_2, weights[${i * layer_1_depth * 4 + 62}]) + dot(in_3, weights[${i * layer_1_depth * 4 + 63}]));
+      out3 += vec4(dot(in_0, weights[${pageOffset + 48}]) + dot(in_1, weights[${pageOffset + 49}]) + dot(in_2, weights[${pageOffset + 50}]) + dot(in_3, weights[${pageOffset + 51}]),
+                   dot(in_0, weights[${pageOffset + 52}]) + dot(in_1, weights[${pageOffset + 53}]) + dot(in_2, weights[${pageOffset + 54}]) + dot(in_3, weights[${pageOffset + 55}]),
+                   dot(in_0, weights[${pageOffset + 56}]) + dot(in_1, weights[${pageOffset + 57}]) + dot(in_2, weights[${pageOffset + 58}]) + dot(in_3, weights[${pageOffset + 59}]),
+                   dot(in_0, weights[${pageOffset + 60}]) + dot(in_1, weights[${pageOffset + 61}]) + dot(in_2, weights[${pageOffset + 62}]) + dot(in_3, weights[${pageOffset + 63}]));
     `);
   }
 
@@ -353,8 +357,10 @@ function init_conv1_2_program(gl) {
 // kernel size 1 x 3
 function init_conv2_1_program(gl) {
   const operations = [];
+  let pageOffset = 0;
 
   for (let i = 0; i < layer_2_width; i++) {
+    pageOffset = i * layer_2_depth * 4;
     operations.push(`
       coords = vec2(gl_FragCoord.x * videoResInverse.x, (gl_FragCoord.y + ${i}.0) * videoResInverse.y);
 
@@ -363,15 +369,15 @@ function init_conv2_1_program(gl) {
       in_2 = texture(layer3Sampler, coords);
       in_3 = texture(layer4Sampler, coords);
 
-      out0 += vec4(dot(in_0, weights[${i * layer_2_depth * 4 + 0}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 1}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 2}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 3}]),
-                        dot(in_0, weights[${i * layer_2_depth * 4 + 4}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 5}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 6}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 7}]),
-                        dot(in_0, weights[${i * layer_2_depth * 4 + 8}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 9}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 10}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 11}]),
-                        dot(in_0, weights[${i * layer_2_depth * 4 + 12}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 13}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 14}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 15}]));
+      out0 += vec4(dot(in_0, weights[${pageOffset}]) + dot(in_1, weights[${pageOffset + 1}]) + dot(in_2, weights[${pageOffset + 2}]) + dot(in_3, weights[${pageOffset + 3}]),
+                   dot(in_0, weights[${pageOffset + 4}]) + dot(in_1, weights[${pageOffset + 5}]) + dot(in_2, weights[${pageOffset + 6}]) + dot(in_3, weights[${pageOffset + 7}]),
+                   dot(in_0, weights[${pageOffset + 8}]) + dot(in_1, weights[${pageOffset + 9}]) + dot(in_2, weights[${pageOffset + 10}]) + dot(in_3, weights[${pageOffset + 11}]),
+                   dot(in_0, weights[${pageOffset + 12}]) + dot(in_1, weights[${pageOffset + 13}]) + dot(in_2, weights[${pageOffset + 14}]) + dot(in_3, weights[${pageOffset + 15}]));
       
-      out1 += vec4(dot(in_0, weights[${i * layer_2_depth * 4 + 16}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 17}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 18}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 19}]),
-                        dot(in_0, weights[${i * layer_2_depth * 4 + 20}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 21}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 22}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 23}]),
-                        dot(in_0, weights[${i * layer_2_depth * 4 + 24}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 25}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 26}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 27}]),
-                        dot(in_0, weights[${i * layer_2_depth * 4 + 28}]) + dot(in_1, weights[${i * layer_2_depth * 4 + 29}]) + dot(in_2, weights[${i * layer_2_depth * 4 + 30}]) + dot(in_3, weights[${i * layer_2_depth * 4 + 31}]));
+      out1 += vec4(dot(in_0, weights[${pageOffset + 16}]) + dot(in_1, weights[${pageOffset + 17}]) + dot(in_2, weights[${pageOffset + 18}]) + dot(in_3, weights[${pageOffset + 19}]),
+                   dot(in_0, weights[${pageOffset + 20}]) + dot(in_1, weights[${pageOffset + 21}]) + dot(in_2, weights[${pageOffset + 22}]) + dot(in_3, weights[${pageOffset + 23}]),
+                   dot(in_0, weights[${pageOffset + 24}]) + dot(in_1, weights[${pageOffset + 25}]) + dot(in_2, weights[${pageOffset + 26}]) + dot(in_3, weights[${pageOffset + 27}]),
+                   dot(in_0, weights[${pageOffset + 28}]) + dot(in_1, weights[${pageOffset + 29}]) + dot(in_2, weights[${pageOffset + 30}]) + dot(in_3, weights[${pageOffset + 31}]));
     `);
   }
 
@@ -418,23 +424,25 @@ function init_conv2_1_program(gl) {
 // kernel size 3 x 1
 function init_conv2_2_program(gl) {
   const operations = [];
+  let pageOffset = 0;
 
   for (let i = 0; i < 3; i++) {
+    pageOffset = i * 8 * 2;
     operations.push(`
       coords = vec2((gl_FragCoord.x + ${i}.0) * inWidthInverse, gl_FragCoord.y * inHeightInverse);
       
       in_0 = texture(layer1Sampler, coords);
       in_1 = texture(layer2Sampler, coords);
       
-      out0 += vec4(dot(in_0, weights[${i * 8 * 2 + 0}]) + dot(in_1, weights[${i * 8 * 2 + 1}]),
-                        dot(in_0, weights[${i * 8 * 2 + 2}]) + dot(in_1, weights[${i * 8 * 2 + 3}]),
-                        dot(in_0, weights[${i * 8 * 2 + 4}]) + dot(in_1, weights[${i * 8 * 2 + 5}]),
-                        dot(in_0, weights[${i * 8 * 2 + 6}]) + dot(in_1, weights[${i * 8 * 2 + 7}]));
+      out0 += vec4(dot(in_0, weights[${pageOffset}]) + dot(in_1, weights[${pageOffset + 1}]),
+                   dot(in_0, weights[${pageOffset + 2}]) + dot(in_1, weights[${pageOffset + 3}]),
+                   dot(in_0, weights[${pageOffset + 4}]) + dot(in_1, weights[${pageOffset + 5}]),
+                   dot(in_0, weights[${pageOffset + 6}]) + dot(in_1, weights[${pageOffset + 7}]));
       
-      out1 += vec4(dot(in_0, weights[${i * 8 * 2 + 8}]) + dot(in_1, weights[${i * 8 * 2 + 9}]),
-                        dot(in_0, weights[${i * 8 * 2 + 10}]) + dot(in_1, weights[${i * 8 * 2 + 11}]),
-                        dot(in_0, weights[${i * 8 * 2 + 12}]) + dot(in_1, weights[${i * 8 * 2 + 13}]),
-                        dot(in_0, weights[${i * 8 * 2 + 14}]) + dot(in_1, weights[${i * 8 * 2 + 15}]));
+      out1 += vec4(dot(in_0, weights[${pageOffset + 8}]) + dot(in_1, weights[${pageOffset + 9}]),
+                   dot(in_0, weights[${pageOffset + 10}]) + dot(in_1, weights[${pageOffset + 11}]),
+                   dot(in_0, weights[${pageOffset + 12}]) + dot(in_1, weights[${pageOffset + 13}]),
+                   dot(in_0, weights[${pageOffset + 14}]) + dot(in_1, weights[${pageOffset + 15}]));
     `);
   }
 
