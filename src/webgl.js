@@ -110,11 +110,10 @@ const vsSource = `#version 300 es
   #pragma vscode_glsllint_stage: vert
 
   in vec4 aVertexPosition;
-  uniform mat4 uModelViewMatrix;
-  uniform mat4 uProjectionMatrix;
+  uniform mat4 uProjectionModelViewMatrix;
 
   void main(void) {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+      gl_Position = uProjectionModelViewMatrix * aVertexPosition;
   }
   `;
 
@@ -158,38 +157,6 @@ function initShaderProgram(gl, vsSource, fsSource) {
 /**
  * WebGL Shaders
  */
-function initCopyProgram(gl) {
-  const copyFragShader = `#version 300 es
-  #pragma vscode_glsllint_stage: frag
-
-  precision mediump float;
-
-  uniform sampler2D originalSampler;
-
-  uniform vec2 videoRes;
-  uniform vec4 renderArea;
-
-  layout(location = 0) out vec4 copyOut;
-
-  void main() {
-    copyOut = vec4(0.0, 0.0, 0.0, 1.0);
-
-    // if we are not in the padding around the video, get the texture value
-    if (gl_FragCoord.x > renderArea.x
-      && gl_FragCoord.x < renderArea.z
-      && gl_FragCoord.y > renderArea.y
-      && gl_FragCoord.y < renderArea.w
-    ) {
-      copyOut = texture(originalSampler, vec2((gl_FragCoord.x - renderArea.x) / videoRes.x, 1.0 - ((gl_FragCoord.y - renderArea.y) / videoRes.y)));
-    }
-  }
-  `;
-
-  console.log(copyFragShader);
-
-  return initShaderProgram(gl, vsSource, copyFragShader);
-}
-
 // Symmetrically pad a 2d texture with black
 function initPadProgram(gl, padding) {
   const padFragShader = `#version 300 es
@@ -200,21 +167,19 @@ function initPadProgram(gl, padding) {
   uniform sampler2D originalSampler;
   uniform vec2 videoRes;
 
-  ivec2 start = ivec2(${padding}, ${padding});
+  vec2 padding = vec2(${padding});
   layout(location = 0) out vec4 padOut;
+  
+  const vec2 neg1 = vec2(-1.0);
 
   void main() {
-    ivec2 end = ivec2(videoRes.x + ${padding}.0, videoRes.y + ${padding}.0);
-    ivec2 outC = ivec2(gl_FragCoord.x, gl_FragCoord.y);
+    // mask.xy == (1.0, 1.0) when inside the padding
+    vec2 mask = step(padding, gl_FragCoord.xy) - step(videoRes + padding, gl_FragCoord.xy);
 
-    if (any(lessThan(outC, start)) || any(greaterThanEqual(outC, end))) {
-      padOut = vec4(0.0, 0.0, 0.0, 0.0);
-    } else {
-      float x = gl_FragCoord.x - 4.0;
-      float y = gl_FragCoord.y - 4.0;
-      vec2 coords = vec2(x / videoRes.x, y / videoRes.y);
-      padOut = texture(originalSampler, coords) * 255.0;
-    }
+    // adjust texture coords to account for padding
+    vec2 coords = (padding * neg1 + gl_FragCoord.xy) / videoRes.xy;    
+
+    padOut = mask.x * mask.y * texture(originalSampler, coords) * 255.0;
   }
   `;
 
@@ -229,30 +194,36 @@ function initPadProgram(gl, padding) {
 // out: width x (height-4) x 16
 // kernel size 1x5
 function init_conv1_1_program(gl) {
-  const coords = [];
-  const inputs = [];
   const operations = [];
+  let pageOffset = 0;
 
   for (let i = 0; i < 5; i++) {
-    coords.push(`vec2 coords_${i} = vec2(gl_FragCoord.x * videoResInverse.x, (gl_FragCoord.y + ${i}.0) * videoResInverse.y);`);
-    inputs.push(`vec4 in${i} = texture(padSampler, coords_${i});`);
+    pageOffset = i * layer_1_depth;
+    operations.push(`
+      coords = vec2(gl_FragCoord.x * videoResInverse.x, (gl_FragCoord.y + ${i}.0) * videoResInverse.y);
 
-    operations.push(`out0.r += dot(in${i}.rgb, weights[${i * layer_1_depth + 0}].rgb);`);
-    operations.push(`out0.g += dot(in${i}.rgb, weights[${i * layer_1_depth + 1}].rgb);`);
-    operations.push(`out0.b += dot(in${i}.rgb, weights[${i * layer_1_depth + 2}].rgb);`);
-    operations.push(`out0.a += dot(in${i}.rgb, weights[${i * layer_1_depth + 3}].rgb);`);
-    operations.push(`out1.r += dot(in${i}.rgb, weights[${i * layer_1_depth + 4}].rgb);`);
-    operations.push(`out1.g += dot(in${i}.rgb, weights[${i * layer_1_depth + 5}].rgb);`);
-    operations.push(`out1.b += dot(in${i}.rgb, weights[${i * layer_1_depth + 6}].rgb);`);
-    operations.push(`out1.a += dot(in${i}.rgb, weights[${i * layer_1_depth + 7}].rgb);`);
-    operations.push(`out2.r += dot(in${i}.rgb, weights[${i * layer_1_depth + 8}].rgb);`);
-    operations.push(`out2.g += dot(in${i}.rgb, weights[${i * layer_1_depth + 9}].rgb);`);
-    operations.push(`out2.b += dot(in${i}.rgb, weights[${i * layer_1_depth + 10}].rgb);`);
-    operations.push(`out2.a += dot(in${i}.rgb, weights[${i * layer_1_depth + 11}].rgb);`);
-    operations.push(`out3.r += dot(in${i}.rgb, weights[${i * layer_1_depth + 12}].rgb);`);
-    operations.push(`out3.g += dot(in${i}.rgb, weights[${i * layer_1_depth + 13}].rgb);`);
-    operations.push(`out3.b += dot(in${i}.rgb, weights[${i * layer_1_depth + 14}].rgb);`);
-    operations.push(`out3.a += dot(in${i}.rgb, weights[${i * layer_1_depth + 15}].rgb);`);
+      texData = texture(padSampler, coords).rgb;
+      
+      out0 += vec4(dot(texData, weights[${pageOffset}]),
+                   dot(texData, weights[${pageOffset + 1}]),
+                   dot(texData, weights[${pageOffset + 2}]),
+                   dot(texData, weights[${pageOffset + 3}]));
+      
+      out1 += vec4(dot(texData, weights[${pageOffset + 4}]),
+                   dot(texData, weights[${pageOffset + 5}]),
+                   dot(texData, weights[${pageOffset + 6}]),
+                   dot(texData, weights[${pageOffset + 7}]));
+      
+      out2 += vec4(dot(texData, weights[${pageOffset + 8}]),
+                   dot(texData, weights[${pageOffset + 9}]),
+                   dot(texData, weights[${pageOffset + 10}]),
+                   dot(texData, weights[${pageOffset + 11}]));
+      
+      out3 += vec4(dot(texData, weights[${pageOffset + 12}]),
+                   dot(texData, weights[${pageOffset + 13}]),
+                   dot(texData, weights[${pageOffset + 14}]),
+                   dot(texData, weights[${pageOffset + 15}]));
+    `);
   }
 
   const conv1_1_shader = `#version 300 es
@@ -270,6 +241,9 @@ function init_conv1_1_program(gl) {
   layout(location = 3) out vec4 out3;
 
   void main() {
+    vec2 coords = vec2(0.0);
+    vec3 texData = vec3(0.0);
+
     out0 = vec4(0.0);
     out1 = vec4(0.0);
     out2 = vec4(0.0);
@@ -277,14 +251,7 @@ function init_conv1_1_program(gl) {
 
     vec2 videoResInverse = 1.0 / (videoRes + 8.0);
 
-    // Coords
-${coords.join("\n")}
-
-    // Inputs
-${inputs.join("\n")}
-
-    // Operations
-${operations.join("\n")}
+    ${operations.join("\n")}
   }
   `;
 
@@ -299,34 +266,39 @@ ${operations.join("\n")}
 // out: (width-4) x height x 8
 // kernel size 5x1
 function init_conv1_2_program(gl) {
-  const coords = [];
-  const inputs = [];
   const operations = [];
+  let pageOffset = 0;
 
   for (let i = 0; i < layer_1_width; i++) {
-    coords.push(`vec2 coords_${i} = vec2((gl_FragCoord.x + ${i}.0) * inWidthInverse, gl_FragCoord.y * inHeightInverse);`);
+    pageOffset = i * layer_1_depth * 4;
+    operations.push(`
+      coords = vec2((gl_FragCoord.x + ${i}.0) * inWidthInverse, gl_FragCoord.y * inHeightInverse);
 
-    inputs.push(`vec4 in${i}_0 = texture(layer1Sampler, coords_${i});`);
-    inputs.push(`vec4 in${i}_1 = texture(layer2Sampler, coords_${i});`);
-    inputs.push(`vec4 in${i}_2 = texture(layer3Sampler, coords_${i});`);
-    inputs.push(`vec4 in${i}_3 = texture(layer4Sampler, coords_${i});`);
+      in_0 = texture(layer1Sampler, coords);
+      in_1 = texture(layer2Sampler, coords);
+      in_2 = texture(layer3Sampler, coords);
+      in_3 = texture(layer4Sampler, coords);
 
-    operations.push(`out0.r += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 0}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 1}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 2}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 3}]);`);
-    operations.push(`out0.g += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 4}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 5}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 6}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 7}]);`);
-    operations.push(`out0.b += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 8}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 9}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 10}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 11}]);`);
-    operations.push(`out0.a += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 12}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 13}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 14}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 15}]);`);
-    operations.push(`out1.r += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 16}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 17}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 18}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 19}]);`);
-    operations.push(`out1.g += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 20}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 21}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 22}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 23}]);`);
-    operations.push(`out1.b += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 24}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 25}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 26}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 27}]);`);
-    operations.push(`out1.a += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 28}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 29}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 30}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 31}]);`);
-    operations.push(`out2.r += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 32}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 33}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 34}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 35}]);`);
-    operations.push(`out2.g += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 36}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 37}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 38}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 39}]);`);
-    operations.push(`out2.b += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 40}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 41}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 42}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 43}]);`);
-    operations.push(`out2.a += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 44}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 45}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 46}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 47}]);`);
-    operations.push(`out3.r += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 48}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 49}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 50}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 51}]);`);
-    operations.push(`out3.g += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 52}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 53}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 54}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 55}]);`);
-    operations.push(`out3.b += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 56}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 57}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 58}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 59}]);`);
-    operations.push(`out3.a += dot(in${i}_0, weights[${i * layer_1_depth * 4 + 60}]) + dot(in${i}_1, weights[${i * layer_1_depth * 4 + 61}]) + dot(in${i}_2, weights[${i * layer_1_depth * 4 + 62}]) + dot(in${i}_3, weights[${i * layer_1_depth * 4 + 63}]);`);
+      out0 += vec4(dot(in_0, weights[${pageOffset}]) + dot(in_1, weights[${pageOffset + 1}]) + dot(in_2, weights[${pageOffset + 2}]) + dot(in_3, weights[${pageOffset + 3}]), 
+                   dot(in_0, weights[${pageOffset + 4}]) + dot(in_1, weights[${pageOffset + 5}]) + dot(in_2, weights[${pageOffset + 6}]) + dot(in_3, weights[${pageOffset + 7}]),
+                   dot(in_0, weights[${pageOffset + 8}]) + dot(in_1, weights[${pageOffset + 9}]) + dot(in_2, weights[${pageOffset + 10}]) + dot(in_3, weights[${pageOffset + 11}]),
+                   dot(in_0, weights[${pageOffset + 12}]) + dot(in_1, weights[${pageOffset + 13}]) + dot(in_2, weights[${pageOffset + 14}]) + dot(in_3, weights[${pageOffset + 15}]));
+      
+      out1 += vec4(dot(in_0, weights[${pageOffset + 16}]) + dot(in_1, weights[${pageOffset + 17}]) + dot(in_2, weights[${pageOffset + 18}]) + dot(in_3, weights[${pageOffset + 19}]),
+                   dot(in_0, weights[${pageOffset + 20}]) + dot(in_1, weights[${pageOffset + 21}]) + dot(in_2, weights[${pageOffset + 22}]) + dot(in_3, weights[${pageOffset + 23}]),
+                   dot(in_0, weights[${pageOffset + 24}]) + dot(in_1, weights[${pageOffset + 25}]) + dot(in_2, weights[${pageOffset + 26}]) + dot(in_3, weights[${pageOffset + 27}]),
+                   dot(in_0, weights[${pageOffset + 28}]) + dot(in_1, weights[${pageOffset + 29}]) + dot(in_2, weights[${pageOffset + 30}]) + dot(in_3, weights[${pageOffset + 31}]));
+      
+      out2 += vec4(dot(in_0, weights[${pageOffset + 32}]) + dot(in_1, weights[${pageOffset + 33}]) + dot(in_2, weights[${pageOffset + 34}]) + dot(in_3, weights[${pageOffset + 35}]),
+                   dot(in_0, weights[${pageOffset + 36}]) + dot(in_1, weights[${pageOffset + 37}]) + dot(in_2, weights[${pageOffset + 38}]) + dot(in_3, weights[${pageOffset + 39}]),
+                   dot(in_0, weights[${pageOffset + 40}]) + dot(in_1, weights[${pageOffset + 41}]) + dot(in_2, weights[${pageOffset + 42}]) + dot(in_3, weights[${pageOffset + 43}]),
+                   dot(in_0, weights[${pageOffset + 44}]) + dot(in_1, weights[${pageOffset + 45}]) + dot(in_2, weights[${pageOffset + 46}]) + dot(in_3, weights[${pageOffset + 47}]));
+                        
+      out3 += vec4(dot(in_0, weights[${pageOffset + 48}]) + dot(in_1, weights[${pageOffset + 49}]) + dot(in_2, weights[${pageOffset + 50}]) + dot(in_3, weights[${pageOffset + 51}]),
+                   dot(in_0, weights[${pageOffset + 52}]) + dot(in_1, weights[${pageOffset + 53}]) + dot(in_2, weights[${pageOffset + 54}]) + dot(in_3, weights[${pageOffset + 55}]),
+                   dot(in_0, weights[${pageOffset + 56}]) + dot(in_1, weights[${pageOffset + 57}]) + dot(in_2, weights[${pageOffset + 58}]) + dot(in_3, weights[${pageOffset + 59}]),
+                   dot(in_0, weights[${pageOffset + 60}]) + dot(in_1, weights[${pageOffset + 61}]) + dot(in_2, weights[${pageOffset + 62}]) + dot(in_3, weights[${pageOffset + 63}]));
+    `);
   }
 
   const conv1_2_shader = `#version 300 es
@@ -350,6 +322,12 @@ function init_conv1_2_program(gl) {
   layout(location = 3) out vec4 out3;
 
   void main() {
+    vec2 coords = vec2(0.0);
+    vec4 in_0 = vec4(0.0);
+    vec4 in_1 = vec4(0.0);
+    vec4 in_2 = vec4(0.0);
+    vec4 in_3 = vec4(0.0);
+
     out0 = vec4(0.0);
     out1 = vec4(0.0);
     out2 = vec4(0.0);
@@ -358,14 +336,7 @@ function init_conv1_2_program(gl) {
     float inWidthInverse = 1.0 / (videoRes.x + 8.0);
     float inHeightInverse = 1.0 / (videoRes.y + 4.0);
 
-    // Coords
-${coords.join("\n")}
-
-    // Inputs
-${inputs.join("\n")}
-
-    // Operations
-${operations.join("\n")}
+    ${operations.join("\n")}
 
     out0 = max(out0 + biases[0], 0.0);
     out1 = max(out1 + biases[1], 0.0);
@@ -385,26 +356,29 @@ ${operations.join("\n")}
 // out: width x (height - 2) x 8
 // kernel size 1 x 3
 function init_conv2_1_program(gl) {
-  const coords = [];
-  const inputs = [];
   const operations = [];
+  let pageOffset = 0;
 
   for (let i = 0; i < layer_2_width; i++) {
-    coords.push(`vec2 coords_${i} = vec2(gl_FragCoord.x * videoResInverse.x, (gl_FragCoord.y + ${i}.0) * videoResInverse.y);`);
+    pageOffset = i * layer_2_depth * 4;
+    operations.push(`
+      coords = vec2(gl_FragCoord.x * videoResInverse.x, (gl_FragCoord.y + ${i}.0) * videoResInverse.y);
 
-    inputs.push(`vec4 in${i}_0 = texture(layer1Sampler, coords_${i});`);
-    inputs.push(`vec4 in${i}_1 = texture(layer2Sampler, coords_${i});`);
-    inputs.push(`vec4 in${i}_2 = texture(layer3Sampler, coords_${i});`);
-    inputs.push(`vec4 in${i}_3 = texture(layer4Sampler, coords_${i});`);
+      in_0 = texture(layer1Sampler, coords);
+      in_1 = texture(layer2Sampler, coords);
+      in_2 = texture(layer3Sampler, coords);
+      in_3 = texture(layer4Sampler, coords);
 
-    operations.push(`out0.r += dot(in${i}_0, weights[${i * layer_2_depth * 4 + 0}]) + dot(in${i}_1, weights[${i * layer_2_depth * 4 + 1}]) + dot(in${i}_2, weights[${i * layer_2_depth * 4 + 2}]) + dot(in${i}_3, weights[${i * layer_2_depth * 4 + 3}]);`);
-    operations.push(`out0.g += dot(in${i}_0, weights[${i * layer_2_depth * 4 + 4}]) + dot(in${i}_1, weights[${i * layer_2_depth * 4 + 5}]) + dot(in${i}_2, weights[${i * layer_2_depth * 4 + 6}]) + dot(in${i}_3, weights[${i * layer_2_depth * 4 + 7}]);`);
-    operations.push(`out0.b += dot(in${i}_0, weights[${i * layer_2_depth * 4 + 8}]) + dot(in${i}_1, weights[${i * layer_2_depth * 4 + 9}]) + dot(in${i}_2, weights[${i * layer_2_depth * 4 + 10}]) + dot(in${i}_3, weights[${i * layer_2_depth * 4 + 11}]);`);
-    operations.push(`out0.a += dot(in${i}_0, weights[${i * layer_2_depth * 4 + 12}]) + dot(in${i}_1, weights[${i * layer_2_depth * 4 + 13}]) + dot(in${i}_2, weights[${i * layer_2_depth * 4 + 14}]) + dot(in${i}_3, weights[${i * layer_2_depth * 4 + 15}]);`);
-    operations.push(`out1.r += dot(in${i}_0, weights[${i * layer_2_depth * 4 + 16}]) + dot(in${i}_1, weights[${i * layer_2_depth * 4 + 17}]) + dot(in${i}_2, weights[${i * layer_2_depth * 4 + 18}]) + dot(in${i}_3, weights[${i * layer_2_depth * 4 + 19}]);`);
-    operations.push(`out1.g += dot(in${i}_0, weights[${i * layer_2_depth * 4 + 20}]) + dot(in${i}_1, weights[${i * layer_2_depth * 4 + 21}]) + dot(in${i}_2, weights[${i * layer_2_depth * 4 + 22}]) + dot(in${i}_3, weights[${i * layer_2_depth * 4 + 23}]);`);
-    operations.push(`out1.b += dot(in${i}_0, weights[${i * layer_2_depth * 4 + 24}]) + dot(in${i}_1, weights[${i * layer_2_depth * 4 + 25}]) + dot(in${i}_2, weights[${i * layer_2_depth * 4 + 26}]) + dot(in${i}_3, weights[${i * layer_2_depth * 4 + 27}]);`);
-    operations.push(`out1.a += dot(in${i}_0, weights[${i * layer_2_depth * 4 + 28}]) + dot(in${i}_1, weights[${i * layer_2_depth * 4 + 29}]) + dot(in${i}_2, weights[${i * layer_2_depth * 4 + 30}]) + dot(in${i}_3, weights[${i * layer_2_depth * 4 + 31}]);`);
+      out0 += vec4(dot(in_0, weights[${pageOffset}]) + dot(in_1, weights[${pageOffset + 1}]) + dot(in_2, weights[${pageOffset + 2}]) + dot(in_3, weights[${pageOffset + 3}]),
+                   dot(in_0, weights[${pageOffset + 4}]) + dot(in_1, weights[${pageOffset + 5}]) + dot(in_2, weights[${pageOffset + 6}]) + dot(in_3, weights[${pageOffset + 7}]),
+                   dot(in_0, weights[${pageOffset + 8}]) + dot(in_1, weights[${pageOffset + 9}]) + dot(in_2, weights[${pageOffset + 10}]) + dot(in_3, weights[${pageOffset + 11}]),
+                   dot(in_0, weights[${pageOffset + 12}]) + dot(in_1, weights[${pageOffset + 13}]) + dot(in_2, weights[${pageOffset + 14}]) + dot(in_3, weights[${pageOffset + 15}]));
+      
+      out1 += vec4(dot(in_0, weights[${pageOffset + 16}]) + dot(in_1, weights[${pageOffset + 17}]) + dot(in_2, weights[${pageOffset + 18}]) + dot(in_3, weights[${pageOffset + 19}]),
+                   dot(in_0, weights[${pageOffset + 20}]) + dot(in_1, weights[${pageOffset + 21}]) + dot(in_2, weights[${pageOffset + 22}]) + dot(in_3, weights[${pageOffset + 23}]),
+                   dot(in_0, weights[${pageOffset + 24}]) + dot(in_1, weights[${pageOffset + 25}]) + dot(in_2, weights[${pageOffset + 26}]) + dot(in_3, weights[${pageOffset + 27}]),
+                   dot(in_0, weights[${pageOffset + 28}]) + dot(in_1, weights[${pageOffset + 29}]) + dot(in_2, weights[${pageOffset + 30}]) + dot(in_3, weights[${pageOffset + 31}]));
+    `);
   }
 
   const conv2_1_shader = `#version 300 es
@@ -424,19 +398,18 @@ function init_conv2_1_program(gl) {
   layout(location = 1) out vec4 out1;
 
   void main() {
+    vec2 coords = vec2(0.0);
+    vec4 in_0 = vec4(0.0);
+    vec4 in_1 = vec4(0.0);
+    vec4 in_2 = vec4(0.0);
+    vec4 in_3 = vec4(0.0);
+  
     out0 = vec4(0.0);
     out1 = vec4(0.0);
 
     vec2 videoResInverse = 1.0 / (videoRes + 4.0);
 
-    // Coords
-${coords.join("\n")}
-
-    // Inputs
-${inputs.join("\n")}
-
-    // Operations
-${operations.join("\n")}
+    ${operations.join("\n")}
   }
   `;
 
@@ -450,24 +423,27 @@ ${operations.join("\n")}
 // out: (width-2) x height x 4
 // kernel size 3 x 1
 function init_conv2_2_program(gl) {
-  const coords = [];
-  const inputs = [];
   const operations = [];
+  let pageOffset = 0;
 
   for (let i = 0; i < 3; i++) {
-    coords.push(`vec2 coords_${i} = vec2((gl_FragCoord.x + ${i}.0) * inWidthInverse, gl_FragCoord.y * inHeightInverse);`);
-
-    inputs.push(`vec4 in${i}_0 = texture(layer1Sampler, coords_${i});`);
-    inputs.push(`vec4 in${i}_1 = texture(layer2Sampler, coords_${i});`);
-
-    operations.push(`out0.r += dot(in${i}_0, weights[${i * 8 * 2 + 0}]) + dot(in${i}_1, weights[${i * 8 * 2 + 1}]);`);
-    operations.push(`out0.g += dot(in${i}_0, weights[${i * 8 * 2 + 2}]) + dot(in${i}_1, weights[${i * 8 * 2 + 3}]);`);
-    operations.push(`out0.b += dot(in${i}_0, weights[${i * 8 * 2 + 4}]) + dot(in${i}_1, weights[${i * 8 * 2 + 5}]);`);
-    operations.push(`out0.a += dot(in${i}_0, weights[${i * 8 * 2 + 6}]) + dot(in${i}_1, weights[${i * 8 * 2 + 7}]);`);
-    operations.push(`out1.r += dot(in${i}_0, weights[${i * 8 * 2 + 8}]) + dot(in${i}_1, weights[${i * 8 * 2 + 9}]);`);
-    operations.push(`out1.g += dot(in${i}_0, weights[${i * 8 * 2 + 10}]) + dot(in${i}_1, weights[${i * 8 * 2 + 11}]);`);
-    operations.push(`out1.b += dot(in${i}_0, weights[${i * 8 * 2 + 12}]) + dot(in${i}_1, weights[${i * 8 * 2 + 13}]);`);
-    operations.push(`out1.a += dot(in${i}_0, weights[${i * 8 * 2 + 14}]) + dot(in${i}_1, weights[${i * 8 * 2 + 15}]);`);
+    pageOffset = i * 8 * 2;
+    operations.push(`
+      coords = vec2((gl_FragCoord.x + ${i}.0) * inWidthInverse, gl_FragCoord.y * inHeightInverse);
+      
+      in_0 = texture(layer1Sampler, coords);
+      in_1 = texture(layer2Sampler, coords);
+      
+      out0 += vec4(dot(in_0, weights[${pageOffset}]) + dot(in_1, weights[${pageOffset + 1}]),
+                   dot(in_0, weights[${pageOffset + 2}]) + dot(in_1, weights[${pageOffset + 3}]),
+                   dot(in_0, weights[${pageOffset + 4}]) + dot(in_1, weights[${pageOffset + 5}]),
+                   dot(in_0, weights[${pageOffset + 6}]) + dot(in_1, weights[${pageOffset + 7}]));
+      
+      out1 += vec4(dot(in_0, weights[${pageOffset + 8}]) + dot(in_1, weights[${pageOffset + 9}]),
+                   dot(in_0, weights[${pageOffset + 10}]) + dot(in_1, weights[${pageOffset + 11}]),
+                   dot(in_0, weights[${pageOffset + 12}]) + dot(in_1, weights[${pageOffset + 13}]),
+                   dot(in_0, weights[${pageOffset + 14}]) + dot(in_1, weights[${pageOffset + 15}]));
+    `);
   }
 
   const conv2_2_shader = `#version 300 es
@@ -485,21 +461,19 @@ function init_conv2_2_program(gl) {
   layout(location = 0) out vec4 out0;
   layout(location = 1) out vec4 out1;
 
-  void main() {
+  void main() {    
+    vec2 coords = vec2(0.0);
+    vec4 in_0 = vec4(0.0);
+    vec4 in_1 = vec4(0.0);  
+  
     out0 = vec4(0.0);
     out1 = vec4(0.0);
-
+    
+    // divisions are more expensive than multiplications, calculate it once and use it as a multiplication many times 
     float inWidthInverse = 1.0 / (videoRes.x + 4.0);
     float inHeightInverse = 1.0 / (videoRes.y + 2.0);
 
-    // Coords
-${coords.join("\n")}
-
-    // Inputs
-${inputs.join("\n")}
-
-    // Operations
-${operations.join("\n")}
+    ${operations.join("\n")}
 
     out0 = max(out0 + biases[0], 0.0);
     out1 = max(out1 + biases[1], 0.0);
@@ -524,21 +498,21 @@ function init_reconstruct_program(gl) {
   for (let j = 0; j < 3; j++) {
     for (let i = 0; i < 3; i++) {
       // Todo
-      coords.push(`vec2 coords_${j}_${i} = vec2((inX + ${i}.0) * videoResInverse.x, (inY + ${j}.0) * videoResInverse.y);`);
+      coords.push(`vec2 coords_${j}_${i} = vec2((fIn.x + ${i}.0) * videoResInverse.x, (fIn.y + ${j}.0) * videoResInverse.y);`);
 
       inputs.push(`vec4 in_${j}_${i}_0 = texture(layer1Sampler, coords_${j}_${i});`);
       inputs.push(`vec4 in_${j}_${i}_1 = texture(layer2Sampler, coords_${j}_${i});`);
 
-      weights.push(`vec4 w_${j}_${i}_0_0 = weights[2 * (iOutY * 81 + iOutX * 27 + ${j * 9 + i * 3}) + 0];`);
-      weights.push(`vec4 w_${j}_${i}_0_1 = weights[2 * (iOutY * 81 + iOutX * 27 + ${j * 9 + i * 3}) + 1];`);
-      weights.push(`vec4 w_${j}_${i}_1_0 = weights[2 * (iOutY * 81 + iOutX * 27 + ${j * 9 + i * 3}) + 2];`);
-      weights.push(`vec4 w_${j}_${i}_1_1 = weights[2 * (iOutY * 81 + iOutX * 27 + ${j * 9 + i * 3}) + 3];`);
-      weights.push(`vec4 w_${j}_${i}_2_0 = weights[2 * (iOutY * 81 + iOutX * 27 + ${j * 9 + i * 3}) + 4];`);
-      weights.push(`vec4 w_${j}_${i}_2_1 = weights[2 * (iOutY * 81 + iOutX * 27 + ${j * 9 + i * 3}) + 5];`);
+      weights.push(`vec4 w_${j}_${i}_0_0 = weights[2 * (iOut.y * 81 + iOut.x * 27 + ${j * 9 + i * 3}) + 0];`);
+      weights.push(`vec4 w_${j}_${i}_0_1 = weights[2 * (iOut.y * 81 + iOut.x * 27 + ${j * 9 + i * 3}) + 1];`);
+      weights.push(`vec4 w_${j}_${i}_1_0 = weights[2 * (iOut.y * 81 + iOut.x * 27 + ${j * 9 + i * 3}) + 2];`);
+      weights.push(`vec4 w_${j}_${i}_1_1 = weights[2 * (iOut.y * 81 + iOut.x * 27 + ${j * 9 + i * 3}) + 3];`);
+      weights.push(`vec4 w_${j}_${i}_2_0 = weights[2 * (iOut.y * 81 + iOut.x * 27 + ${j * 9 + i * 3}) + 4];`);
+      weights.push(`vec4 w_${j}_${i}_2_1 = weights[2 * (iOut.y * 81 + iOut.x * 27 + ${j * 9 + i * 3}) + 5];`);
 
-      operations.push(`r_val += dot(in_${j}_${i}_0, w_${j}_${i}_0_0) + dot(in_${j}_${i}_1, w_${j}_${i}_0_1);`);
-      operations.push(`g_val += dot(in_${j}_${i}_0, w_${j}_${i}_1_0) + dot(in_${j}_${i}_1, w_${j}_${i}_1_1);`);
-      operations.push(`b_val += dot(in_${j}_${i}_0, w_${j}_${i}_2_0) + dot(in_${j}_${i}_1, w_${j}_${i}_2_1);`);
+      operations.push(`out0.rgb += vec3(dot(in_${j}_${i}_0, w_${j}_${i}_0_0) + dot(in_${j}_${i}_1, w_${j}_${i}_0_1),
+                                        dot(in_${j}_${i}_0, w_${j}_${i}_1_0) + dot(in_${j}_${i}_1, w_${j}_${i}_1_1),
+                                        dot(in_${j}_${i}_0, w_${j}_${i}_2_0) + dot(in_${j}_${i}_1, w_${j}_${i}_2_1));`);
     }
   }
 
@@ -564,32 +538,21 @@ function init_reconstruct_program(gl) {
 
   void main() {
     out0 = vec4(0.0, 0.0, 0.0, 1.0);
-    float r_val = 0.0;
-    float g_val = 0.0;
-    float b_val = 0.0;
 
-    int iOutX = int(mod(gl_FragCoord.x - 0.5, 3.0));
-    int iOutY = int(mod(gl_FragCoord.y - 0.5, 3.0));
-
-    float inX = (gl_FragCoord.x - float(iOutX) - 0.5) * oneThird + 0.5;
-    float inY = (gl_FragCoord.y - float(iOutY) - 0.5) * oneThird + 0.5;
-
+    ivec2 iOut = ivec2(mod(gl_FragCoord - 0.5, 3.0));
+    vec2 fIn = vec2(gl_FragCoord - float(iOut) + 1.0) * oneThird;
     vec2 videoResInverse = 1.0 / (videoRes + 2.0);
 
-    // Coords
 ${coords.join("\n")}
 
-    // Inputs
 ${inputs.join("\n")}
 
-    // Weights
 ${weights.join("\n")}
 
-    // Operations
 ${operations.join("\n")}
 
-    out0.rgb = (vec3(r_val, g_val, b_val) + biases[3 * iOutY + iOutX].rgb) * oneTwoFiftyFifth;
-    out0.rgb += texture(originalSampler, vec2(gl_FragCoord.x / (videoRes.x * 3.0), gl_FragCoord.y / (videoRes.y * 3.0))).rgb;
+    out0.rgb = (out0.rgb + biases[3 * iOut.y + iOut.x].rgb) * oneTwoFiftyFifth;
+    out0.rgb += texture(originalSampler, (gl_FragCoord.xy / (videoRes * 3.0))).rgb;
     out0.rgb = clamp(out0.rgb, 0.0, 1.0);
   }
   `;
@@ -598,6 +561,40 @@ ${operations.join("\n")}
 
   return initShaderProgram(gl, vsSource, reconstruct_shader);
 }
+
+function initRenderProgram(gl) {
+  const renderFragShader = `#version 300 es
+  #pragma vscode_glsllint_stage: frag
+
+  precision mediump float;
+
+  uniform sampler2D originalSampler;
+
+  uniform vec2 videoRes;
+  uniform vec4 renderArea;
+
+  layout(location = 0) out vec4 copyOut;
+
+  void main() {
+    // check if the gl_FragCoord is within the bounds of the renderArea
+    // if mask.x == 1.0 it means we are within the x bounds of renderArea, similarly for mask.y
+    vec2 mask = step(renderArea.xy, gl_FragCoord.xy) - step(renderArea.zw, gl_FragCoord.xy);
+
+    // align the image in the renderArea area and scale to the videoRes
+    vec2 texCoords = (gl_FragCoord.xy - renderArea.xy) / videoRes.xy;
+    // flip the texture image vertically
+    texCoords.y = 1.0 - texCoords.y;
+
+    // if mask.x and mask.y are 1.0 use the value returned from texture()  
+    copyOut = mask.x * mask.y * texture(originalSampler, texCoords);
+  }
+  `;
+
+  console.log(renderFragShader);
+
+  return initShaderProgram(gl, vsSource, renderFragShader);
+}
+
 
 function initBuffers(gl) {
   // Create a buffer for the cube's vertex positions.
@@ -764,32 +761,41 @@ function updateTexture(gl, texture, video) {
 
 // Setup the unchanging variables for drawScene
 
-// Create a perspective matrix, a special matrix that is
-// used to simulate the distortion of perspective in a camera.
-// Our field of view is 45 degrees, with a width/height
-// ratio that matches the display size of the canvas
-// and we only want to see objects between 0.1 units
-// and 100 units away from the camera.
-const zNear = 0.1;
-const zFar = 100.0;
-const projectionMatrix = mat4.create();
-mat4.ortho(projectionMatrix, -1.0, 1.0, 1.0, -1.0, zNear, zFar);
+// the multiplication of projectionMatrix and modelViewMatrix are used in the vertex shader, we compute it here once
+// and pass in the result as a uniform
 
-// Set the drawing position to the "identity" point, which is
-// the center of the scene.
-const modelViewMatrix = mat4.create();
+const projectionModelViewMatrix = mat4.create();
 
-// Now move the drawing position a bit to where we want to
-// start drawing the square.
-mat4.translate(
-  modelViewMatrix, // destination matrix
-  modelViewMatrix, // matrix to translate
-  [-0.0, 0.0, -6.0] // amount to translate
-);
+{
+  // Create a perspective matrix, a special matrix that is
+  // used to simulate the distortion of perspective in a camera.
+  // Our field of view is 45 degrees, with a width/height
+  // ratio that matches the display size of the canvas
+  // and we only want to see objects between 0.1 units
+  // and 100 units away from the camera.
+  const zNear = 0.1;
+  const zFar = 100.0;
+  const projectionMatrix = mat4.create();
+  mat4.ortho(projectionMatrix, -1.0, 1.0, 1.0, -1.0, zNear, zFar);
 
-const normalMatrix = mat4.create();
-mat4.invert(normalMatrix, modelViewMatrix);
-mat4.transpose(normalMatrix, normalMatrix);
+  // Set the drawing position to the "identity" point, which is
+  // the center of the scene.
+  const modelViewMatrix = mat4.create();
+
+  // Now move the drawing position a bit to where we want to
+  // start drawing the square.
+  mat4.translate(
+    modelViewMatrix, // destination matrix
+    modelViewMatrix, // matrix to translate
+    [-0.0, 0.0, -6.0] // amount to translate
+  );
+
+  const normalMatrix = mat4.create();
+  mat4.invert(normalMatrix, modelViewMatrix);
+  mat4.transpose(normalMatrix, normalMatrix);
+
+  mat4.multiply(projectionModelViewMatrix, projectionMatrix, modelViewMatrix);
+}
 
 /**
  * Executes the GL program with the passed buffers and texture
@@ -829,16 +835,10 @@ function drawScene(gl, programInfo, buffers, texture) {
 
   // Set the shader uniforms
   gl.uniformMatrix4fv(
-    programInfo.uniformLocations.projectionMatrix,
+    programInfo.uniformLocations.projectionModelViewMatrix,
     false,
-    projectionMatrix
+    projectionModelViewMatrix,
   );
-  gl.uniformMatrix4fv(
-    programInfo.uniformLocations.modelViewMatrix,
-    false,
-    modelViewMatrix
-  );
-
   if (programInfo.textures.length > 0) {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, programInfo.textures[0]);
@@ -1011,7 +1011,6 @@ export function main(player, canvas, options) {
 
   // set default clearing values
   gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
-  gl.clearDepth(1.0); // Clear everything
   gl.enable(gl.DEPTH_TEST); // Enable depth testing
   gl.depthFunc(gl.LEQUAL); // Near things obscure far things
 
@@ -1052,8 +1051,7 @@ export function main(player, canvas, options) {
       vertexPosition: gl.getAttribLocation(padProgram, 'aVertexPosition'),
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(padProgram, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(padProgram, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(padProgram, 'uProjectionModelViewMatrix'),
       videoResLocation: gl.getUniformLocation(padProgram, 'videoRes')
     },
     // 1-1 mapping between samplers and textures
@@ -1071,8 +1069,7 @@ export function main(player, canvas, options) {
       vertexPosition: gl.getAttribLocation(conv1_1_program, 'aVertexPosition'),
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(conv1_1_program, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(conv1_1_program, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(conv1_1_program, 'uProjectionModelViewMatrix'),
       weightsLocation: gl.getUniformLocation(conv1_1_program, 'weights'),
       videoResLocation: gl.getUniformLocation(conv1_1_program, 'videoRes')
     },
@@ -1092,8 +1089,7 @@ export function main(player, canvas, options) {
       vertexPosition: gl.getAttribLocation(conv1_2_program, 'aVertexPosition'),
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(conv1_2_program, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(conv1_2_program, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(conv1_2_program, 'uProjectionModelViewMatrix'),
       weightsLocation: gl.getUniformLocation(conv1_2_program, 'weights'),
       biasesLocation: gl.getUniformLocation(conv1_2_program, 'biases'),
       videoResLocation: gl.getUniformLocation(conv1_2_program, 'videoRes')
@@ -1119,8 +1115,7 @@ export function main(player, canvas, options) {
       vertexPosition: gl.getAttribLocation(conv2_1_program, 'aVertexPosition'),
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(conv2_1_program, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(conv2_1_program, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(conv2_1_program, 'uProjectionModelViewMatrix'),
       weightsLocation: gl.getUniformLocation(conv2_1_program, 'weights'),
       videoResLocation: gl.getUniformLocation(conv2_1_program, 'videoRes')
     },
@@ -1144,8 +1139,7 @@ export function main(player, canvas, options) {
       vertexPosition: gl.getAttribLocation(conv2_2_program, 'aVertexPosition'),
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(conv2_2_program, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(conv2_2_program, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(conv2_2_program, 'uProjectionModelViewMatrix'),
       weightsLocation: gl.getUniformLocation(conv2_2_program, 'weights'),
       biasesLocation: gl.getUniformLocation(conv2_2_program, 'biases'),
       videoResLocation: gl.getUniformLocation(conv2_2_program, 'videoRes')
@@ -1169,8 +1163,7 @@ export function main(player, canvas, options) {
       vertexPosition: gl.getAttribLocation(reconstruct_program, 'aVertexPosition'),
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(reconstruct_program, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(reconstruct_program, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(reconstruct_program, 'uProjectionModelViewMatrix'),
       weightsLocation: gl.getUniformLocation(reconstruct_program, 'weights'),
       biasesLocation: gl.getUniformLocation(reconstruct_program, 'biases'),
       videoResLocation: gl.getUniformLocation(reconstruct_program, 'videoRes')
@@ -1189,18 +1182,14 @@ export function main(player, canvas, options) {
   };
 
   console.log('Render program');
-  const render_program = initCopyProgram(gl);
+  const render_program = initRenderProgram(gl);
   const render_program_info = {
     program: render_program,
     attribLocations: {
       vertexPosition: gl.getAttribLocation(render_program, 'aVertexPosition')
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(
-        render_program,
-        'uProjectionMatrix'
-      ),
-      modelViewMatrix: gl.getUniformLocation(render_program, 'uModelViewMatrix'),
+      projectionModelViewMatrix: gl.getUniformLocation(render_program, 'uProjectionModelViewMatrix'),
       renderAreaLocation: gl.getUniformLocation(render_program, 'renderArea'),
       videoResLocation: gl.getUniformLocation(render_program, 'videoRes')
     },
